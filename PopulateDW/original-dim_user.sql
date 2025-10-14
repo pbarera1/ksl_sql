@@ -1,9 +1,8 @@
 --########################################################################################################################################################
 --###################################################### Fill in Dim_User  #####################################################################
 --########################################################################################################################################################
-TRUNCATE TABLE Dim_User;
-
-WITH CTE (
+--TRUNCATE TABLE Dim_User;
+;WITH CTE (
 	ksl_CommunityIdName
 	,ksl_CommunityId
 	,FullName
@@ -29,7 +28,7 @@ AS (
 			) AS dupcnt
 	FROM kslcloud_mscrm.dbo.systemuser
 	) --select * from CTE where dupcnt = 1
-INSERT INTO Dim_User
+--INSERT INTO Dim_User
 SELECT ksl_CommunityIdName
 	,ksl_CommunityId
 	,FullName
