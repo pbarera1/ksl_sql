@@ -7,7 +7,6 @@
 -- Insert statements for procedure here
 --TRUNCATE TABLE Fact_Activity
 --INSERT INTO Fact_Activity
-
 SELECT a.accountid
 	,a.OwnerId AccountOwnerID
 	,a.OwnerIdName AccountOwnerName
