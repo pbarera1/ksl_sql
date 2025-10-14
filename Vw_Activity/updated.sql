@@ -144,7 +144,12 @@ FROM (
 		,ksl_textssent
 		,ksl_textsreceived
 		,b.AccountStatus as AccountStatus
-		,b.CompletedDate AS CompletedDate
+		--,b.CompletedDate AS CompletedDate
+		,isnull(dateadd(hour, (
+					SELECT com.[ksl_utctimeadjust]
+					FROM [KSLCLOUD_MSCRM].[dbo].[ksl_community] com
+					WHERE ksl_communityid = a.ksl_communityid
+					), b.CompletedDate), b.CompletedDate) CompletedDate
 	FROM (
 		SELECT activityid
 			,ksl_resultoptions_displayname AS Rslt
@@ -185,7 +190,12 @@ FROM (
 		,ksl_textssent
 		,ksl_textsreceived
 		,NULL AS AccountStatus
-		,b.CompletedDate AS CompletedDate
+		--,b.CompletedDate AS CompletedDate
+		,isnull(dateadd(hour, (
+					SELECT com.[ksl_utctimeadjust]
+					FROM [KSLCLOUD_MSCRM].[dbo].[ksl_community] com
+					WHERE ksl_communityid = a.ksl_communityid
+					), b.CompletedDate), b.CompletedDate) CompletedDate
 	FROM (
 		SELECT activityid
 			,ksl_resultoptions_displayname AS Rslt
