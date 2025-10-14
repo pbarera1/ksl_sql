@@ -1,0 +1,18 @@
+services:
+  app:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      # keep container-only node_modules for speed/stability on Windows
+      - node_modules:/workspace/node_modules
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+    # Keep container alive for shells & devcontainers; your dev command runs in the terminal
+    command: sh -c "tail -f /dev/null"
+
+volumes:
+  node_modules:

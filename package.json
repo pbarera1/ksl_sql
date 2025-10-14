@@ -1,0 +1,24 @@
+{
+  "name": "my-code-snippets",
+  "version": "1.0.0",
+  "description": "| ReportPath | Views | ksl_sms | appointment | letter | phonecall | email | task | systemuser | Status | Notes |\r | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\r | /Sales Reports/Sales Director NRR | 1025 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |  | Looks clear except NRR dataset refs to DataWarehouse.Dim_User.SystemUserId  |\r | **/Sales Reports/SIP** | 612 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 🔴 | Draft - of **DataSet2**",
+  "main": "index.js",
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-sql": "^0.19.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbarera1/ksl_sql.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pbarera1/ksl_sql/issues"
+  },
+  "homepage": "https://github.com/pbarera1/ksl_sql#readme"
+}

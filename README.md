@@ -41,3 +41,13 @@ GraphTrend - ref to Vw_Activities table |
 | /Sales Reports/Zip Code Trend | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
 | **/Sales Reports/Event Analysis** | 4 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 🟡 | Copy with todos. Only one activitytypecode letter |
 | **/Sales Reports/Event Analysis BD** | 1 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 🟡 | Copy made with todos. No email open or click data |
+
+
+
+
+
+activities.activitytypecode AS ActivityType
+activities.ksl_resultoptions_displayname AS Rslt
+-- LIKE = 'Lead' or NOT LIKE = 'Do NOt contact%'
+-- appointment types are gone
+-- activity ties to account account.statuscodedisplayname = referral org (BD) or Lead (Sales)

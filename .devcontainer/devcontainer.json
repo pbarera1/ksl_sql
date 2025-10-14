@@ -1,0 +1,17 @@
+{
+    "name": "Node 22 (alpine) – Compose",
+    "dockerComposeFile": ["../docker-compose.yml"],
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    "remoteUser": "node",
+    "overrideCommand": false,
+    "forwardPorts": [3000, 5173],
+    "postCreateCommand": "sh -lc \"corepack enable || true; if [ -f pnpm-lock.yaml ]; then pnpm install; elif [ -f yarn.lock ]; then yarn install; elif [ -f package-lock.json ]; then npm ci; else npm install; fi\"",
+    "customizations": {
+      "vscode": {
+        "extensions": ["esbenp.prettier-vscode"],
+        "settings": { "editor.formatOnSave": true }
+      }
+    }
+  }
+  

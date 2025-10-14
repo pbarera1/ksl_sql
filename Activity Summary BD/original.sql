@@ -1,75 +1,111 @@
-use DataWarehouse;
-declare @c NVARCHAR(4000) = '119C1A08-0142-E511-96FE-0050568B37AC'; --La Posada
+USE DataWarehouse;
 
-select FullName Label
-			--,[FullName]
-			,Case when FullName like 'Elizabeth Sykes' then '[Dim_User].[FullName].&[Betsy Sykes]'
-				when FullName like 'Carol Lowe' then '[Dim_User].[FullName].&[Lynn Lowe]'
-				when FullName like 'Leala Connors-Gillespie' then '[Dim_User].[FullName].&[Leala Connors]'
-				when FullName like 'Mary Romaine' then '[Dim_User].[FullName].&[Abby Romaine]'
-				when FullName like 'Michael Jacobs' then '[Dim_User].[FullName].&[Mike Jacobs]'
-				when FullName like 'Tesshanna Berry' then '[Dim_User].[FullName].&[Tess Berry]'
-				when FullName like 'Francisco Campos-Bautista' then '[Dim_User].[FullName].&[kiko Campos-Bautista]'
-				when FullName like 'Sandra Wilson' then '[Dim_User].[FullName].&[Sandie Wilson]'
-				when FullName like 'Samantha Martin' then '[Dim_User].[FullName].&[Sam Martin]'
+DECLARE @c NVARCHAR(4000) = '119C1A08-0142-E511-96FE-0050568B37AC';--La Posada
 
-				when FullName like 'Genevieve Wood' then '[Dim_User].[FullName].&[Jen Wood]'
-		
-				else concat('[Dim_User].[FullName].&[',FullName,']')  end Filter
+SELECT FullName Label
+	--,[FullName]
+	,CASE 
+		WHEN FullName LIKE 'Elizabeth Sykes'
+			THEN '[Dim_User].[FullName].&[Betsy Sykes]'
+		WHEN FullName LIKE 'Carol Lowe'
+			THEN '[Dim_User].[FullName].&[Lynn Lowe]'
+		WHEN FullName LIKE 'Leala Connors-Gillespie'
+			THEN '[Dim_User].[FullName].&[Leala Connors]'
+		WHEN FullName LIKE 'Mary Romaine'
+			THEN '[Dim_User].[FullName].&[Abby Romaine]'
+		WHEN FullName LIKE 'Michael Jacobs'
+			THEN '[Dim_User].[FullName].&[Mike Jacobs]'
+		WHEN FullName LIKE 'Tesshanna Berry'
+			THEN '[Dim_User].[FullName].&[Tess Berry]'
+		WHEN FullName LIKE 'Francisco Campos-Bautista'
+			THEN '[Dim_User].[FullName].&[kiko Campos-Bautista]'
+		WHEN FullName LIKE 'Sandra Wilson'
+			THEN '[Dim_User].[FullName].&[Sandie Wilson]'
+		WHEN FullName LIKE 'Samantha Martin'
+			THEN '[Dim_User].[FullName].&[Sam Martin]'
+		WHEN FullName LIKE 'Genevieve Wood'
+			THEN '[Dim_User].[FullName].&[Jen Wood]'
+		ELSE CONCAT (
+				'[Dim_User].[FullName].&['
+				,FullName
+				,']'
+				)
+		END Filter
+	,CASE 
+		WHEN FullName LIKE 'Genevieve Wood'
+			THEN 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
+		WHEN FullName LIKE 'Courtney Heyboer'
+			THEN 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
+		WHEN FullName LIKE 'Samantha Martin'
+			THEN 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
+		ELSE [ksl_communityId]
+		END [ksl_communityId]
+FROM Dim_User
+WHERE systemuserid IN (
+		SELECT DISTINCT ownerid
+		FROM (
+			SELECT APPT.ownerid
+			FROM KSLCLOUD_MSCRM..Appointment APPT
+			INNER JOIN KSLCLOUD_MSCRM..contact LD ON appt.regardingobjectid = ld.contactid
+			INNER JOIN KSLCLOUD_MSCRM..ksl_referralorgs r ON LD.ksl_referralorgid = r.ksl_referralorgsid
+			WHERE LD.statecode = 0
+				AND (
+					(
+						SELECT TOP 1 ksl_name
+						FROM KSLCLOUD_MSCRM..ksl_community
+						WHERE ksl_communityId IN (@c)
+						) IN (
+						SELECT u1.name
+						FROM KSLCLOUD_MSCRM..businessunit u
+						LEFT JOIN KSLCLOUD_MSCRM..businessunitmap m ON u.businessunitid = m.businessid
+						LEFT JOIN KSLCLOUD_MSCRM..businessunit u1 ON u1.businessunitid = m.subbusinessid
+						WHERE u.businessunitid = (
+								SELECT TOP 1 businessunitid
+								FROM KSLCLOUD_MSCRM..team
+								WHERE teamid = r.ownerid
+								)
+							OR u.businessunitid = (
+								SELECT ksl_regionalteamid
+								FROM KSLCLOUD_MSCRM..systemuser
+								WHERE systemuserid = r.ownerid
+								)
+						)
+					)
+				AND APPT.scheduledstart BETWEEN getdate() - 45
+					AND getdate() + 14
+				AND r.ksl_referralorgtypeidname <> 'Paid Referral Agency'
 			
-			,Case when FullName like 'Genevieve Wood' then 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
-				when FullName like 'Courtney Heyboer' then 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
-				when FullName like 'Samantha Martin' then 'EF0600C1-95BA-EC11-983F-000D3A5C5E3E'
-				else [ksl_communityId] end [ksl_communityId]
-
-
-
-
+			UNION ALL
 			
-				
-  from	Dim_User	where 	systemuserid in (																				
-
-
-
-
-	SELECT distinct ownerid
-	FROM  (
-	
-	select APPT.ownerid
-	FROM  KSLCLOUD_MSCRM..Appointment APPT 
-		inner join KSLCLOUD_MSCRM..contact LD on appt.regardingobjectid = ld.contactid
-		inner join  KSLCLOUD_MSCRM..ksl_referralorgs r on  LD.ksl_referralorgid = r.ksl_referralorgsid
-		WHERE LD.statecode = 0 
-	and (
-		 ( select top 1 ksl_name
-	from KSLCLOUD_MSCRM..ksl_community
-	where   ksl_communityId in (@c) ) in  (select u1.name from KSLCLOUD_MSCRM..businessunit u left join KSLCLOUD_MSCRM..businessunitmap m on u.businessunitid = m.businessid left join KSLCLOUD_MSCRM..businessunit u1 on u1.businessunitid = m.subbusinessid 
-	where u.businessunitid = (select top 1 businessunitid from KSLCLOUD_MSCRM..team where teamid = r.ownerid)
-	or 
-	u.businessunitid = (select ksl_regionalteamid from KSLCLOUD_MSCRM..systemuser where systemuserid = r.ownerid)
-	)
+			SELECT APPT.ownerid
+			FROM KSLCLOUD_MSCRM..phonecall APPT
+			INNER JOIN KSLCLOUD_MSCRM..contact LD ON appt.regardingobjectid = ld.contactid
+			INNER JOIN KSLCLOUD_MSCRM..ksl_referralorgs r ON LD.ksl_referralorgid = r.ksl_referralorgsid
+			WHERE LD.statecode = 0
+				AND (
+					(
+						SELECT TOP 1 ksl_name
+						FROM KSLCLOUD_MSCRM..ksl_community
+						WHERE ksl_communityId IN (@c)
+						) IN (
+						SELECT u1.name
+						FROM KSLCLOUD_MSCRM..businessunit u
+						LEFT JOIN KSLCLOUD_MSCRM..businessunitmap m ON u.businessunitid = m.businessid
+						LEFT JOIN KSLCLOUD_MSCRM..businessunit u1 ON u1.businessunitid = m.subbusinessid
+						WHERE u.businessunitid = (
+								SELECT TOP 1 businessunitid
+								FROM KSLCLOUD_MSCRM..team
+								WHERE teamid = r.ownerid
+								)
+							OR u.businessunitid = (
+								SELECT ksl_regionalteamid
+								FROM KSLCLOUD_MSCRM..systemuser
+								WHERE systemuserid = r.ownerid
+								)
+						)
+					)
+				AND APPT.scheduledstart BETWEEN getdate() - 45
+					AND getdate() + 14
+				AND r.ksl_referralorgtypeidname <> 'Paid Referral Agency'
+			) k
 		)
-	and   APPT.scheduledstart between getdate() - 45 and  getdate()+14
-	and r.ksl_referralorgtypeidname <> 'Paid Referral Agency'
-	
-	union all 
-	
-	select APPT.ownerid
-	FROM  KSLCLOUD_MSCRM..phonecall APPT 
-		inner join KSLCLOUD_MSCRM..contact LD on appt.regardingobjectid = ld.contactid
-		inner join  KSLCLOUD_MSCRM..ksl_referralorgs r on  LD.ksl_referralorgid = r.ksl_referralorgsid
-		WHERE LD.statecode = 0 
-	and (
-		 ( select top 1 ksl_name
-	from KSLCLOUD_MSCRM..ksl_community
-	where   ksl_communityId in (@c) ) in  (select u1.name from KSLCLOUD_MSCRM..businessunit u left join KSLCLOUD_MSCRM..businessunitmap m on u.businessunitid = m.businessid left join KSLCLOUD_MSCRM..businessunit u1 on u1.businessunitid = m.subbusinessid 
-	where u.businessunitid = (select top 1 businessunitid from KSLCLOUD_MSCRM..team where teamid = r.ownerid)
-	or 
-	u.businessunitid = (select ksl_regionalteamid from KSLCLOUD_MSCRM..systemuser where systemuserid = r.ownerid)
-	)
-		)
-	and   APPT.scheduledstart between getdate() - 45 and  getdate()+14
-	and r.ksl_referralorgtypeidname <> 'Paid Referral Agency'
-	
-	) k 
-	)
