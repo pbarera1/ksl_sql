@@ -115,3 +115,73 @@ INNER JOIN (
 	) a ON b.regardingobjectid = a.contactid
 	--- Lead Texts
 	-- ALL SEPERATE TEXT TALLY INSERTS GONE AS MOVED TO ONE ROW MODEL, ex. no ksl_textssent count
+
+
+
+-- TRY AGAIN --
+WITH A AS (  -- Completed activities + computed fields once
+  SELECT
+    PC.ownerid,
+    PC.activityid,
+    PC.subject,
+    PC.activitytypecode,
+    PC.regardingobjectid,
+    PC.ksl_resultoptions_displayname AS rslt,
+    LEFT(PC.description, 300)        AS notes,
+    PC.[from],
+    PC.scheduledend,
+    CASE
+      WHEN PC.description LIKE '%sm.chat%'
+        OR (PC.description LIKE '%See your personal message here!%' AND PC.subject NOT LIKE 'Re: %')
+      THEN 'Yes' ELSE 'No'
+    END AS isSalesMail
+  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+  WHERE PC.statuscode_displayname = 'Completed'
+),
+Acct AS (  -- Accounts
+  SELECT
+    a.accountid,
+    a.ownerid,
+    a.owneridname,
+    a.ksl_communityid,
+    a.ksl_communityidname
+  FROM kslcloud_mscrm.dbo.account AS a WITH (NOLOCK)
+),
+Cnt AS (   -- Referral-source contacts only
+  SELECT
+    c.contactid,
+    c.ownerid,
+    c.ksl_communityid,
+    c.ksl_communityidname
+  FROM kslcloud_mscrm.dbo.contact AS c WITH (NOLOCK)
+  WHERE c.ksl_contacttype = 864960002  -- referral source
+)
+SELECT
+  COALESCE(ac.accountid, ct.contactid)                         AS EntityId,
+  CASE WHEN ct.contactid IS NOT NULL THEN ct.ownerid ELSE ac.ownerid END AS AccountOwnerID,
+  CASE WHEN ct.contactid IS NOT NULL THEN A.[from]  ELSE ac.owneridname END AS AccountOwnerName,
+  COALESCE(ac.ksl_communityid,      ct.ksl_communityid)        AS CommunityId,
+  COALESCE(ac.ksl_communityidname,  ct.ksl_communityidname)    AS CommunityIdName,
+
+  /* Activity details */
+  A.subject                                                    AS ActivitySubject,
+  CASE WHEN ct.contactid IS NOT NULL
+       THEN A.activitytypecode + ' BD'
+       ELSE A.activitytypecode
+  END                                                          AS ActivityType,
+  A.activitytypecode                                           AS ActivityTypeDetail,
+  A.rslt,
+  A.activityid,
+  A.notes,
+  CASE WHEN ct.contactid IS NOT NULL THEN 'Yes' ELSE 'No' END  AS isbd,
+  A.isSalesMail,
+  CAST(NULL AS varchar(50))                                    AS google_campaignID,  -- placeholder
+  A.scheduledend                                               AS CompletedAt,
+  Assoc.USR_First + ' ' + Assoc.USR_Last                       AS CreatedBy
+FROM A
+LEFT JOIN Acct AS ac ON A.regardingobjectid = ac.accountid
+LEFT JOIN Cnt  AS ct ON A.regardingobjectid = ct.contactid
+LEFT JOIN KiscoCustom.dbo.Associate Assoc ON A.ownerid = Assoc.SalesAppID
+-- keep only rows that matched either Account or the referral Contact
+WHERE (ac.accountid IS NOT NULL OR ct.contactid IS NOT NULL)
+AND COALESCE(ac.ksl_communityidname,ct.ksl_communityidname) = 'La Posada';
