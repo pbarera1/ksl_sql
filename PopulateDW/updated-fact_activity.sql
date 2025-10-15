@@ -27,7 +27,7 @@ WITH A AS (  -- Completed activities + computed fields once
     END AS isSalesMail
   FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
   WHERE PC.statuscode_displayname = 'Completed'
-  AND PC.scheduledend >= DATEADD(DAY, -7, GETDATE())  -- last 7×24 hours
+  AND PC.scheduledend >= DATEADD(DAY, -7, GETDATE())  -- last 7ï¿½24 hours
 ),
 Acct AS (  -- Accounts
   SELECT
@@ -125,7 +125,7 @@ WITH AllActivities AS (
         PC.activityid,
         PC.description as notes,
         -- BD logic: Contact activities are BD if they belong to a Referral Org account
-        CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END as isbd,
+        CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END as isbd, -- TODO or should this be C.ksl_contacttype_displayname = Referral Source	& ksl_contacttype = 864960002
         -- SalesMail logic
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END as isSalesMail,
         NULL as google_campaignID,
@@ -159,6 +159,6 @@ SELECT
     createdby,
     ActivitySource
 FROM AllActivities
-WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC' --Byron Park
-AND CompletedDate >= DATEADD(month, -1, GETDATE())
+--TEST: WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC' --Byron Park
+-- TEST: AND CompletedDate >= DATEADD(month, -1, GETDATE())
 ORDER BY CompletedDate DESC
