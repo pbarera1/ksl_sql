@@ -217,7 +217,14 @@ FROM (
 	) AS x
 OUTER APPLY (
 	SELECT TOP 1 *
-	FROM lastce
-	WHERE X.accountid = lastce.regardingobjectid
-	ORDER BY lastce.lastcedate ASC
+	FROM LastCE
+	WHERE X.accountid = lastCE.regardingobjectid
+	ORDER BY LastCE.LastCEDate ASC
 	) FCE
+
+--TESTING
+--WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
+--AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
+--ORDER BY x.CompletedDate DESC;
+GO
+

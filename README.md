@@ -1,53 +1,50 @@
 
-### Notes
+## Notes
 
-| ReportPath | Views | ksl_sms | appointment | letter | phonecall | email | task | systemuser | Status | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| /Sales Reports/Sales Director NRR | 1025 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |  | Looks clear except NRR dataset refs to DataWarehouse.Dim_User.SystemUserId  |
-| **/Sales Reports/SIP** | 612 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 🔴 | Draft - of **DataSet2**
+## Migrations
 
-[DataWarehouse].[dbo].[Dim_User].SystemserId ref in DataSet1 |
-| **/Sales Reports/Activity Summary** | 148 | 0 | 1 | 1 | 1 | 1 | 1 | 1 |  | SDTargetMI, SDList, NRR, MoveIns – systemuser
+Combining activities into one table
+- KSLCLOUD_MSCRM database tables: ksl_sms, appointment, letter, phonecall, email, task are being combined into a new table: activities
 
-GraphTrend, GraphTrendWeekly, GrpahTrendMoQtr  - ref to Vw_Activities
-PastDue – various refs
+The KSLCLOUD_MSCRM systemuser table will be moved to KiscoCustom.Associate, some items like title will need to be gathered via join to ksl_roles
+- KISCOCLOUD_MSCRM.systemuser.systemuserid → KiscoCustom.Associate.SalesAppID
+- KISCOCLOUD_MSCRM.systemuser.fullname → KiscoCustom.Associate.USR_First + ' ' +  KiscoCustom.Associate.USR_First.USR_Last
+- KISCOCLOUD_MSCRM.systemuser.title → KiscoCustom.dbo.KSL_Roles.Name 
 
-ReactiveDue - phonecall 
+## Common Joins
+```
+   INNER JOIN [KiscoCustom].[dbo].[Associate] u
+           ON u.SalesAppID = a.accountownerid
+    JOIN KiscoCustom.dbo.KSL_Roles r on r.roleid = u.RoleID
+    JOIN  KiscoCustom.dbo.Community as c ON c.CommunityIDY = u.USR_CommunityIDY
+    JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community as commCrm ON commCrm.ksl_communityid = c.CRM_CommunityID
+   LEFT JOIN leads l
+          ON commCrm.ksl_securityregionteamid = l.ksl_securityregionteamid
+   LEFT JOIN nrr
+          ON nrr.ksl_securityregionteamid = commCrm.ksl_securityregionteamid
+   LEFT JOIN moveins mi
+          ON mi.ksl_securityregionteamid = commCrm.ksl_securityregionteamid
+   LEFT JOIN newrs nr
+          ON nr.ownerid = u.SalesAppID
+   LEFT JOIN resref rr
+          ON rr.[ksl_associtateduser] = u.SalesAppID
+          
+   INNER JOIN kslcloud_mscrm_restore_test.dbo.activities PC WITH (nolock)
+        ON PC.regardingobjectid = L.accountid
+        
+   Associate.SalesAppId = contact.contactid
+JOIN KiscoCustom.dbo.KSL_Roles r on r.roleid = s.roleid
 
-Avg3mo - DimUser, Measures |
-| /Sales Reports/Sales Counselor Performance | 134 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 🟡 | Updated systemuserid - other refs are to DataWarehouse/Fact_activity |
-| /Sales Reports/Lead Source Trend | 97 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Pricing Report | 92 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Sales Performance | 83 | 0 | 1 | 0 | 0 | 1 | 0 | 0 | 🔴 | Ref to [Measures].[Appointments Subsequent Monthly Avg], no email
-
-MDX query? DataSource1 |
-| /Sales Reports/Competitors_Rates | 71 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/ReferralPrediction | 46 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Source Analysis | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/SIP_CE | 35 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | ✅ | Refs are to “Appointments - Face” - to appointment table |
-| /Sales Reports/Competitor Analysis | 30 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| **/Sales Reports/BD Performance** | 29 | 0 | 1 | 1 | 1 | 1 | 0 | 1 |  |  |
-| /Sales Reports/SIP_Targets | 29 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| **/Sales Reports/Activity Summary BD** | 25 | 0 | 1 | 0 | 1 | 0 | 0 | 1 | 🟡 | **SDLList - draft**
-GraphTrend - ref to Vw_Activities table |
-| /Sales Reports/Move In Analysis | 21 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | ✅ | Ref to “Appointments - CE ALL DATES” |
-| /Sales Reports/Scheduled_Visits | 17 | 0 | 1 | 0 | 0 | 1 | 0 | 0 | ✅ | Ref to non email tables, [Staging].[dbo].[calendly], [KSLCLOUD_MSCRM].[dbo].[account], and ksl_community. No appointment ref |
-| /Sales Reports/PriceValueAnalysis | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/BD Analytics | 12 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/MI Source Trend | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/DOW_LeadTrend | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Professional Ref Move Ins | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Resident Referral Analytics | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| /Sales Reports/Zip Code Trend | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | ✅ | No refs, per query |
-| **/Sales Reports/Event Analysis** | 4 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 🟡 | Copy with todos. Only one activitytypecode letter |
-| **/Sales Reports/Event Analysis BD** | 1 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 🟡 | Copy made with todos. No email open or click data |
-
-
-
+    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Contact C WITH (NOLOCK)
+    INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) 
+        ON PC.RegardingObjectId = C.contactid
+    LEFT JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A 
+        ON A.primarycontactid = C.contactid  -- Contacts roll up to accounts
+    LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
+```
 
 
-activities.activitytypecode AS ActivityType
-activities.ksl_resultoptions_displayname AS Rslt
--- LIKE = 'Lead' or NOT LIKE = 'Do NOt contact%'
--- appointment types are gone
--- activity ties to account account.statuscodedisplayname = referral org (BD) or Lead (Sales)
+Other Updates
+- LIKE = 'Lead' or NOT LIKE = 'Do NOt contact%'
+- appointment types are gone
+- activities tie to an account via account.statuscodedisplayname = referral org (BD) or Lead (Sales)
