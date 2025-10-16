@@ -119,7 +119,7 @@ WITH AllActivities AS (
         A.ksl_CommunityIdName as CommunityIdName,
         PC.Subject as ActivitySubject,
         PC.ActivityTypeCode as ActivityType,
-        PC.ActivityTypeCode as ActivityTypeDetail, -- This was a number like 864960000 but now phonecall etc.
+        PC.ActivityTypeCode as ActivityTypeDetail, -- TODO This was a number like 864960000 but now phonecall etc.
         PC.scheduledstart as CompletedDate,
         PC.ksl_resultoptions_displayname as Rslt,
         PC.activityid,

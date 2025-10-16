@@ -90,12 +90,10 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
 			THEN 1
 		ELSE 0
-		END AS Community_Experience --remove or set as 0
-	,0 AS Virtual_Community_Experience --remove or set as 0
+		END AS Community_Experience --TODO remove or set as 0
+	,0 AS Virtual_Community_Experience -- TODO remove or set as 0
 	,CASE 
-		WHEN activitytype LIKE '%phone%' --better way to write this?
-		AND activitytype <> 'Committed Phone Appointment'
-			AND ActivityTypeDetail <> 'Incoming Phone Call'
+		WHEN activitytype = 'Outgoing Phone Call'
 			AND Rslt <> 'Cancelled'
 			AND Rslt <> 'Completed'
 			AND AccountStatus = 'Referral Org'
@@ -103,16 +101,14 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Phone_Call_Attempted_Biz_Dev
 	,CASE 
-		WHEN activitytype LIKE '%phone%'
-		AND activitytype <> 'Committed Phone Appointment'
-			AND ActivityTypeDetail <> 'Incoming Phone Call'
+		WHEN activitytype = 'Outgoing Phone Call'
 			AND Rslt <> 'Cancelled'
 			AND Rslt <> 'Completed'
 			THEN 1
 		ELSE 0
 		END AS Phone_Call_Attempted
 	,CASE 
-		WHEN activitytype = 'Outbound Text Message' -- do all non biz dev need AccountStatus = 'Lead'
+		WHEN activitytype = 'Outbound Text Message'
 			THEN 1
 		ELSE 0
 		END AS TextSent
@@ -341,7 +337,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Sent_Messages_Biz_Dev
 	,CASE 
-		WHEN activitytype = 'Outbound Text Message'
+		WHEN activitytype = 'Outbound Text Message' -- TODO do all non biz dev need AccountStatus = 'Lead'
 			AND AccountStatus = 'Referral Org'
 			AND ksl_textssent > 0
 			THEN ksl_textssent
