@@ -27,7 +27,7 @@ WITH A AS (  -- Completed activities + computed fields once
     END AS isSalesMail
   FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
   WHERE PC.statuscode_displayname = 'Completed'
-  AND PC.scheduledend >= DATEADD(DAY, -7, GETDATE())  -- last 7×24 hours
+  AND PC.scheduledend >= DATEADD(DAY, -7, GETDATE())  -- last 7ï¿½24 hours
 ),
 Acct AS (  -- Accounts
   SELECT
@@ -106,7 +106,7 @@ WITH AllActivities AS (
     FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A WITH (NOLOCK)
     INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) 
         ON PC.RegardingObjectId = A.accountid
-    LEFT JOIN KiscoCustom.dbo.Associate Assoc ON A.ownerid = Assoc.SalesAppID
+    LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
     
     UNION ALL
     
@@ -137,7 +137,7 @@ WITH AllActivities AS (
         ON PC.RegardingObjectId = C.contactid
     LEFT JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A 
         ON A.primarycontactid = C.contactid  -- Contacts roll up to accounts
-    LEFT JOIN KiscoCustom.dbo.Associate Assoc ON A.ownerid = Assoc.SalesAppID
+    LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 )
 
 SELECT 
