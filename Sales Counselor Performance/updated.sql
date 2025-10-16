@@ -14,9 +14,7 @@ AS (
 		,a.isSalesMail
 		,a.activityCreatedBy
 		,LTRIM(RTRIM(s.USR_First + ' ' + s.USR_Last)) AS fullname
-		,--new SA
 		s.SalesAppID AS BookerOwnerid
-		,--new SA
 		c.GroupedShortName
 		,'CommpletedAppt' AS Source
 		,acc.ksl_donotcontactreason
@@ -55,8 +53,7 @@ AS (
 			,IsBD
 		FROM [DataWarehouse].[dbo].[Fact_Activity] a
 		) a
-	-- JOIN [KSLCLOUD_MSCRM]..systemuser s ON s.systemuserid = a.[activityCreatedBy] --old SA
-	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = a.[activityCreatedBy] --new SA
+	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = a.[activityCreatedBy]
 	JOIN KiscoCustom.dbo.KSL_Roles r ON r.roleid = s.roleid
 	JOIN (
 		SELECT DISTINCT Groupedksl_communityId
@@ -100,9 +97,7 @@ AS (
 					,' '
 					,s.USR_Last
 					))) AS fullname
-		,--new SA
 		s.SalesAppID BookerOwnerid
-		,--new SA
 		c.GroupedShortName
 		,'BookedAppt' AS Source
 		,a.ksl_donotcontactreason
@@ -142,8 +137,7 @@ AS (
 		FROM [KSLCLOUD_MSCRM].[dbo].[appointment]
 		) ap
 	JOIN KSLCLOUD_MSCRM.dbo.Account a WITH (NOLOCK) ON ap.RegardingObjectId = a.accountid -- Correct join
-		-- JOIN [KSLCLOUD_MSCRM]..systemuser s ON s.systemuserid = ap.createdby --old SA
-	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = ap.createdby --new SA
+	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = ap.createdby
 	JOIN KiscoCustom.dbo.KSL_Roles r ON r.roleid = s.roleid
 	JOIN (
 		SELECT DISTINCT Groupedksl_communityId
@@ -170,8 +164,7 @@ AS (
 		c.GroupedShortName
 	FROM [DataWarehouse].[dbo].[Fact_Lead] L
 	JOIN [KSLCLOUD_MSCRM].[dbo].[account] acc ON L.Lead_AccountID = acc.accountid
-	-- JOIN [KSLCLOUD_MSCRM]..systemuser s ON s.systemuserid = acc.createdby --old SA
-	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = acc.createdby --new SA 
+	JOIN [KiscoCustom].[dbo].[Associate] s ON s.SalesAppID = acc.createdby
 	JOIN KiscoCustom.dbo.KSL_Roles r ON r.roleid = s.roleid
 	JOIN (
 		SELECT DISTINCT Groupedksl_communityId
@@ -180,7 +173,7 @@ AS (
 		) c ON c.Groupedksl_communityId = L.ksl_CommunityId
 	WHERE acc.createdon BETWEEN @StartDate
 			AND @EndDate
-		AND r.Name LIKE '%sales counselor%' --new SA
+		AND r.Name LIKE '%sales counselor%'
 	)
 	,CommunityNRR
 AS (
