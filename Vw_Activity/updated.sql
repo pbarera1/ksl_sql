@@ -414,3 +414,50 @@ OUTER APPLY (
 WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
   AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
 ORDER BY x.CompletedDate DESC;
+
+
+-- TODO AllActivities with Text Counts
+  SELECT
+  CASE 
+    WHEN a.ActivityType IN ('Outgoing Text Message') THEN 1
+    WHEN a.ActivityType = 'Inbound Text Message'                              THEN 0
+    WHEN a.ActivityType = 'Text Message Conversation' THEN
+         (LEN(COALESCE(a.EmailBody,'')) - LEN(REPLACE(COALESCE(a.EmailBody,''), 'SENT', ''))) / 4
+    ELSE 0
+  END AS TextsSent,
+  CASE 
+    WHEN a.ActivityType IN ('Outgoing Text Message') THEN 0
+    WHEN a.ActivityType = 'Inbound Text Message'                              THEN 1
+    WHEN a.ActivityType = 'Text Message Conversation' THEN
+         (LEN(COALESCE(a.EmailBody,'')) - LEN(REPLACE(COALESCE(a.EmailBody,''), 'RCVD', ''))) / 4
+    ELSE 0
+  END AS TextsReceived,
+  a.EmailBody,
+  a.*
+FROM (
+  SELECT 
+      A.accountid,
+      A.OwnerID               AS AccountOwnerID,
+      A.OwnerIDname           AS AccountOwnerName,
+      A.ksl_CommunityId       AS CommunityId,
+      A.ksl_CommunityIdName   AS CommunityIdName,
+      PC.Subject              AS ActivitySubject,
+      PC.ActivityTypeCode     AS ActivityType,
+      NULL                    AS ActivityTypeDetail,
+      PC.scheduledstart       AS CompletedDate,
+      PC.ksl_resultoptions_displayname AS Rslt,
+      PC.activityid,
+      PC.description          AS notes,
+      CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
+      CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
+      NULL                    AS google_campaignID,
+      PC.ownerid              AS CreatedBy,
+      PC.ownerid              AS activityCreatedBy,
+      PC.EmailBody
+  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
+  JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+    ON PC.RegardingObjectId = A.accountid
+) a
+WHERE a.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'  -- Byron Park
+  AND CONVERT(date, a.CompletedDate) >= '2025-09-16'
+  AND a.ActivityType LIKE '%Text Message%';   -- include Outbound/Inbound/Conversation
