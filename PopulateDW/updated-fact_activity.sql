@@ -119,13 +119,13 @@ WITH AllActivities AS (
         A.ksl_CommunityIdName as CommunityIdName,
         PC.Subject as ActivitySubject,
         PC.ActivityTypeCode as ActivityType,
-        PC.ActivityTypeCode as ActivityTypeDetail, -- TODO This was a number like 864960000 but now phonecall etc.
+        NULL as ActivityTypeDetail, -- TODO This was a number like 864960000 but now phonecall etc.
         PC.scheduledstart as CompletedDate,
         PC.ksl_resultoptions_displayname as Rslt,
         PC.activityid,
         PC.description as notes,
         -- BD logic: Contact activities are BD if they belong to a Referral Org account
-        CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END as isbd, -- TODO or should this be C.ksl_contacttype_displayname = Referral Source	& ksl_contacttype = 864960002
+        CASE WHEN A.statuscode_displayname LIKE 'Referral Org%' THEN 'Yes' ELSE 'No' END as isbd, -- TODO or should this be C.ksl_contacttype_displayname = Referral Source	& ksl_contacttype = 864960002
         -- SalesMail logic
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END as isSalesMail,
         NULL as google_campaignID,
