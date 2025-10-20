@@ -1,5 +1,5 @@
---USE KSLCLOUD_MSCRM;
---DECLARE @DimUserFullName NVARCHAR(4000) = 'robin howland';
+USE KSLCLOUD_MSCRM_RESTORE_TEST;
+DECLARE @DimUserFullName NVARCHAR(4000) = 'robin howland';
 WITH LastContact
 AS (
 	SELECT b.accountid,
@@ -239,7 +239,7 @@ OUTER APPLY (
 	WHERE regardingobjectid = A.accountid
 	ORDER BY LastAttempt.LastAttemptDate DESC
 	) LA
-LEFT JOIN SystemUser U ON U.SystemUserId = A.OwnerID
+LEFT JOIN KiscoCustom.dbo.Associate U ON U.SalesAppID = A.OwnerID
 LEFT JOIN ksl_community C ON C.ksl_communityId = A.ksl_CommunityId
 WHERE a.OwnerIDname = replace(substring(ltrim(rtrim(@DimUserFullName)), 25, 100), ']', '')
 	AND a.statuscode_displayname = 'Lead'
@@ -249,7 +249,7 @@ WHERE a.OwnerIDname = replace(substring(ltrim(rtrim(@DimUserFullName)), 25, 100)
 		)
 	AND a.ksl_initialinquirydate < getdate() - 30
 	AND a.ksl_reservationfeetransactiondate IS NULL
-	AND fullname NOT IN (
+	AND U.USR_First + ' ' + U.USR_Last NOT IN (
 		'# Dynamic.Test',
 		'INTEGRATION',
 		'David Watkins',
