@@ -1,3 +1,4 @@
+USE DataWarehouse
 declare @DimUserFullName varchar (100)
 set @DimUserFullName = 'Michelle Taylor'
 SELECT x.GroupedShortName,
