@@ -87,12 +87,14 @@ AS (
 AS (
 	SELECT accountownerid
 		,Sum(CASE 
-				WHEN [activitytype] LIKE '%appointment%'
+				WHEN [activitytype] IN ('Committed Face Appointment BD', 'Unscheduled Walk-In BD')
+				--WHEN [activitytype] LIKE '%appointment BD%'
 					THEN 1
 				ELSE 0
 				END) AS appointment_BD
 		,Sum(CASE 
-				WHEN [activitytype] = 'RR Bus Development Drop In BD' --TODO doesn't exist
+				WHEN [activitytype] IN ('RR Committed Face Appointment BD', 'RR Unscheduled Walk-In BD') --TODO correct?
+				--WHEN [activitytype] LIKE '%RRappointment BD%'
 					THEN 1
 				ELSE 0
 				END) * 1.0 AS RR_appointment_BD
@@ -108,7 +110,7 @@ AS (
 				END) AS letter_BD
 		,Sum(CASE 
 				WHEN [activitytype] LIKE '%phone%'
-				AND [activitytype] <> 'Committed Phone Appointment'
+				AND [activitytype] <> 'Committed Phone Appointment BD'
 					THEN 1
 				ELSE 0
 				END) AS phonecall_BD
