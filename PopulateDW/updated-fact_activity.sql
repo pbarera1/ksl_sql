@@ -168,3 +168,135 @@ SELECT *
 FROM TextConversationEvents
 --ORDER BY CompletedDate DESC
 ORDER BY accountid, activityid
+
+
+-- TAKE 3? with text count, one per row for conversations
+WITH AllActivities AS (
+    SELECT 
+        A.accountid,
+        A.OwnerID                     AS AccountOwnerID,
+        A.OwnerIDname                 AS AccountOwnerName,
+        A.ksl_CommunityId             AS CommunityId,
+        A.ksl_CommunityIdName         AS CommunityIdName,
+        PC.Subject                    AS ActivitySubject,
+        PC.ActivityTypeCode           AS ActivityType,
+        NULL                          AS ActivityTypeDetail,     -- will override for text tokens
+        PC.scheduledstart             AS CompletedDate,
+        PC.ksl_resultoptions_displayname AS Rslt,                -- will override for text tokens
+        PC.activityid,
+        PC.description                AS notes,
+        CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
+        CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
+        CAST(NULL AS varchar(50))     AS google_campaignID,
+        PC.ownerid                    AS CreatedBy,
+        PC.ownerid                    AS activityCreatedBy,
+        PC.EmailBody
+    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
+    JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+      ON PC.RegardingObjectId = A.accountid
+),
+-- One row per SENT/RCVD token for conversation activities
+TextConversationEvents AS (
+    SELECT
+        a.accountid,
+        a.AccountOwnerID,
+        a.AccountOwnerName,
+        a.CommunityId,
+        a.CommunityIdName,
+        a.ActivitySubject,
+        -- Keep the parent activity type; you can also set a fixed label like 'ksl_sms'
+        a.ActivityType,
+        CASE WHEN LEFT(tok,4) = 'SENT' THEN 1002 ELSE 1001 END AS ActivityTypeDetail,
+        a.CompletedDate,
+        CASE WHEN LEFT(tok,4) = 'SENT' THEN 'Text Sent' ELSE 'Text Received' END AS Rslt,
+        a.activityid,
+        a.notes,
+        a.isBD,
+        a.isSalesMail,
+        a.google_campaignID,
+        a.activityCreatedBy,
+        -- Optional: extract per-message timestamp & message text from the token:  SENT [yyyy-mm-dd hh:mm:ss] message...
+        TRY_CONVERT(datetime2,
+            NULLIF(SUBSTRING(tok,
+                   CHARINDEX('[',tok)+1,
+                   NULLIF(CHARINDEX(']',tok),0) - CHARINDEX('[',tok) - 1), '')
+        ) AS MessageTime,
+        LTRIM(SUBSTRING(tok, NULLIF(CHARINDEX(']',tok),0) + 1, 4000)) AS MessageText,
+        ROW_NUMBER() OVER (PARTITION BY a.activityid ORDER BY s.ordinal) AS MsgIndex
+    FROM AllActivities a
+    CROSS APPLY (
+        -- Choose the text source: EmailBody if present, else notes
+        VALUES (COALESCE(a.EmailBody, a.notes, ''))
+    ) src(body)
+    CROSS APPLY (
+        -- Normalize CR/LF and add a '|' marker before RCVD/SENT so we can split and KEEP the token header
+        VALUES (
+            REPLACE(
+              REPLACE(
+                REPLACE(src.body, CHAR(13)+CHAR(10), ' '),  -- newlines -> spaces
+              'RCVD', '|RCVD'),
+            'SENT', '|SENT')
+        )
+    ) norm(marked)
+    CROSS APPLY STRING_SPLIT(norm.marked, '|', 1) AS s
+    CROSS APPLY (VALUES (LTRIM(s.value))) AS v(tok)
+    WHERE a.ActivityType = 'Text Message Conversation'
+      AND (tok LIKE 'SENT%' OR tok LIKE 'RCVD%')
+),
+-- Non-conversation activities (pass through unchanged)
+NonConversation AS (
+    SELECT
+        accountid,
+        AccountOwnerID,
+        AccountOwnerName,
+        CommunityId,
+        CommunityIdName,
+        ActivitySubject,
+        ActivityType,
+        ActivityTypeDetail,   -- stays NULL (or original) for non-text
+        CompletedDate,
+        Rslt,
+        activityid,
+        notes,
+        isBD,
+        isSalesMail,
+        google_campaignID,
+        activityCreatedBy,
+        CAST(NULL AS datetime2) AS MessageTime,
+        CAST(NULL AS nvarchar(4000)) AS MessageText,
+        NULL AS MsgIndex
+    FROM AllActivities
+    WHERE ActivityType <> 'Text Message Conversation'
+)
+-- Final unified set
+SELECT *
+FROM NonConversation
+
+UNION ALL
+
+SELECT
+    accountid,
+    AccountOwnerID,
+    AccountOwnerName,
+    CommunityId,
+    CommunityIdName,
+    ActivitySubject,
+    ActivityType,
+    ActivityTypeDetail,
+    CompletedDate,
+    Rslt,
+    activityid,
+    notes,
+    isBD,
+    isSalesMail,
+    google_campaignID,
+    activityCreatedBy,
+    MessageTime,
+    MessageText,
+    MsgIndex
+FROM TextConversationEvents
+
+-- Optional filters
+-- WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'
+--   AND CompletedDate >= DATEADD(MONTH, -1, GETDATE())
+ORDER BY activityid, MsgIndex NULLS LAST, CompletedDate;
