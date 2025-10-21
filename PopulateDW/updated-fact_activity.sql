@@ -29,7 +29,7 @@ WITH AllActivities AS (
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END as isSalesMail,
         NULL as google_campaignID,
         PC.ownerid AS CreatedBy,
-        PC.ownerid AS activityCreatedBy,
+        PC.ownerid AS activityCreatedBy
         --Assoc.USR_First + ' ' + Assoc.USR_Last AS CreatedBy,
     FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A WITH (NOLOCK)
     INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) 
@@ -55,7 +55,116 @@ SELECT
     google_campaignID,
     activityCreatedBy
 FROM AllActivities
--- DEBUG: WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC' --Byron Park
--- DEBUG: AND CompletedDate >= DATEADD(month, -1, GETDATE()) -- Last Month
--- DEBUG: ORDER BY CompletedDate DESC
-ORDER BY accountid, activityid, 1
+--WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC' --Byron Park
+--AND CompletedDate >= DATEADD(month, -3, GETDATE()) -- Last Month
+--AND CompletedDate <= DATEADD(month, -2, GETDATE()) -- Last Month
+--ORDER BY CompletedDate DESC
+ORDER BY accountid, activityid
+
+-- Take 2
+-- NEED to split text comversation into different rows
+DECLARE @CommunityId uniqueidentifier = '3BC35920-B2DE-E211-9163-0050568B37AC';
+DECLARE @FromDate    date            = '2025-09-17' --DATEADD(MONTH,-1, CAST(GETDATE() as date));
+DECLARE @SampleN     int             = 500;
+
+WITH Filtered AS (
+  SELECT TOP (@SampleN)
+      A.accountid,
+      A.OwnerID               AS AccountOwnerID,
+      A.OwnerIDname           AS AccountOwnerName,
+      A.ksl_CommunityId       AS CommunityId,
+      A.ksl_CommunityIdName   AS CommunityIdName,
+      PC.Subject              AS ActivitySubject,
+      PC.ActivityTypeCode     AS ActivityType,
+      CAST(NULL AS int)       AS ActivityTypeDetail,
+      PC.scheduledstart       AS CompletedDate,
+      PC.ksl_resultoptions_displayname AS Rslt,
+      PC.activityid,
+      PC.description          AS notes,
+      CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
+      CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
+      CAST(NULL AS varchar(50)) AS google_campaignID,
+      PC.ownerid              AS activityCreatedBy,
+      PC.EmailBody
+  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
+  JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+    ON PC.RegardingObjectId = A.accountid
+  --WHERE A.ksl_CommunityId = @CommunityId
+    WHERE CONVERT(date, PC.scheduledstart) = @FromDate
+    --AND PC.statuscode_displayname = 'Completed'
+  ORDER BY PC.scheduledstart DESC
+),
+NonConversation AS (
+  SELECT
+      accountid, AccountOwnerID, AccountOwnerName,
+      CommunityId, CommunityIdName, ActivitySubject,
+      ActivityType, ActivityTypeDetail, CompletedDate, Rslt,
+      activityid, notes, isBD, isSalesMail, google_campaignID,
+      activityCreatedBy,
+      CAST(NULL AS datetime2)      AS MessageTime,
+      CAST(NULL AS nvarchar(4000)) AS MessageText,
+      NULL                         AS MsgIndex
+  FROM Filtered
+  WHERE ActivityType <> 'Text Message Conversation'
+),
+TextConversationEvents AS (
+  SELECT
+      a.accountid,
+      a.AccountOwnerID,
+      a.AccountOwnerName,
+      a.CommunityId,
+      a.CommunityIdName,
+      a.ActivitySubject,
+      a.ActivityType,
+      CASE WHEN LEFT(seg.tok,4) = 'SENT' THEN 1002 ELSE 1001 END AS ActivityTypeDetail,
+      a.CompletedDate,
+      CASE WHEN LEFT(seg.tok,4) = 'SENT' THEN 'Text Sent' ELSE 'Text Received' END AS Rslt,
+      a.activityid,
+      a.notes,
+      a.isBD,
+      a.isSalesMail,
+      a.google_campaignID,
+      a.activityCreatedBy,
+      TRY_CONVERT(datetime2,
+          NULLIF(SUBSTRING(seg.tok,
+                 CHARINDEX('[',seg.tok)+1,
+                 NULLIF(CHARINDEX(']',seg.tok),0) - CHARINDEX('[',seg.tok) - 1), '')
+      ) AS MessageTime,
+      LTRIM(SUBSTRING(seg.tok, NULLIF(CHARINDEX(']',seg.tok),0) + 1, 4000)) AS MessageText,
+      ROW_NUMBER() OVER (PARTITION BY a.activityid ORDER BY pos.start_pos) AS MsgIndex
+  FROM Filtered a
+  CROSS APPLY (
+      SELECT marked =
+         REPLACE(
+           REPLACE(
+             REPLACE(COALESCE(a.EmailBody, a.notes, ''), CHAR(13)+CHAR(10), ' ')
+           ,'RCVD','|RCVD')
+         ,'SENT','|SENT')
+  ) n
+  CROSS APPLY (
+      SELECT s.start_pos,
+             LEAD(s.start_pos,1, LEN(n.marked)+1) OVER (ORDER BY s.start_pos) AS next_pos
+      FROM (
+        SELECT t.n AS start_pos
+        FROM (
+          SELECT TOP (LEN(n.marked))
+                 ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+          FROM sys.all_objects
+        ) t
+        WHERE SUBSTRING(n.marked, t.n, 5) IN ('|SENT','|RCVD')
+      ) s
+  ) pos
+  CROSS APPLY (
+      SELECT tok = SUBSTRING(n.marked, pos.start_pos + 1, pos.next_pos - pos.start_pos - 1)
+  ) seg
+  WHERE a.ActivityType = 'Text Message Conversation'
+    AND (a.EmailBody LIKE '%SENT%' OR a.EmailBody LIKE '%RCVD%')
+)
+
+SELECT *
+FROM NonConversation
+UNION ALL
+SELECT *
+FROM TextConversationEvents
+--ORDER BY CompletedDate DESC
+ORDER BY accountid, activityid

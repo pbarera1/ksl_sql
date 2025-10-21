@@ -56,19 +56,19 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		END AS Appointment
 	,CASE 
 		WHEN ActivityType = 'Inbound Email'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Sent_Messages_Biz_Dev
 	,CASE 
 		WHEN activitytype = 'Outbound Text Message' -- TODO
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS TextSent_Biz_Dev
 	,CASE 
 		WHEN activitytype = 'Inbound Text Message'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS TextReceived_Biz_Dev
@@ -76,14 +76,14 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		WHEN ActivityType LIKE '%phone%'
 			AND activitytype <> 'Committed Phone Appointment'
 			AND Rslt = 'Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Completed_Phone_Calls_Biz_Dev
 	,CASE 
 		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
 			AND Rslt = 'Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Appointment_Biz_Dev
@@ -99,7 +99,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		WHEN activitytype = 'Outgoing Phone Call'
 			AND Rslt <> 'Cancelled'
 			AND Rslt <> 'Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Phone_Call_Attempted_Biz_Dev
@@ -248,61 +248,53 @@ WITH lastce AS (
   ) AS b
 ),
 AllActivities AS (
-  SELECT 
-      A.accountid,
-      A.OwnerID                 AS AccountOwnerID,
-      A.OwnerIDname             AS AccountOwnerName,
-      A.ksl_CommunityId         AS CommunityId,
-      A.ksl_CommunityIdName     AS CommunityIdName,
-      PC.Subject                AS ActivitySubject,
-      PC.ActivityTypeCode       AS ActivityType,
-      PC.ActivityTypeCode       AS ActivityTypeDetail,
-      PC.scheduledstart         AS CompletedDate,
-      PC.ksl_resultoptions_displayname AS Rslt,
-      PC.activityid,
-      PC.description            AS notes,
-      CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isbd,
-      CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
-      NULL AS google_campaignID,
-      PC.ownerid                AS CreatedBy,
-      'Account'                 AS ActivitySource,
-	  A.statuscode_displayname AS AccountStatus,
-	  CASE WHEN PC.activitytypecode IN ('Outbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textssent,
-		CASE WHEN PC.activitytypecode IN ('Inbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textsreceived
-  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A WITH (NOLOCK)
-  INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
-    ON PC.RegardingObjectId = A.accountid
-	WHERE PC.ksl_resultoptions_displayname not in ('Cancelled','') AND PC.ksl_resultoptions_displayname IS NOT NULL
-
-  UNION ALL
-
-  SELECT 
-      A.accountid,
-      A.OwnerID,
-      A.OwnerIDname,
-      A.ksl_CommunityId,
-      A.ksl_CommunityIdName,
-      PC.Subject,
-      PC.ActivityTypeCode,
-      PC.ActivityTypeCode,
-      PC.scheduledstart,
-      PC.ksl_resultoptions_displayname,
-      PC.activityid,
-      PC.description,
-      CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END,
-      CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END,
-      NULL,
-      PC.ownerid,
-      'Contact',
-	  A.statuscode_displayname AS AccountStatus,
-	  CASE WHEN PC.activitytypecode IN ('Outbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textssent,
-		CASE WHEN PC.activitytypecode IN ('Inbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textsreceived
-  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Contact C WITH (NOLOCK)
-  INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
-    ON PC.RegardingObjectId = C.contactid
-  LEFT JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A
-    ON A.primarycontactid = C.contactid
-	WHERE PC.ksl_resultoptions_displayname not in ('Cancelled','') AND PC.ksl_resultoptions_displayname IS NOT NULL
+WITH AllActivities
+AS (
+	SELECT CASE 
+			WHEN a.ActivityType IN ('Outgoing Text Message')
+				THEN 1
+			WHEN a.ActivityType = 'Inbound Text Message'
+				THEN 0
+			WHEN a.ActivityType = 'Text Message Conversation'
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'SENT', ''))) / 4
+			ELSE 0
+			END AS TextsSent,
+		CASE 
+			WHEN a.ActivityType IN ('Outgoing Text Message')
+				THEN 0
+			WHEN a.ActivityType = 'Inbound Text Message'
+				THEN 1
+			WHEN a.ActivityType = 'Text Message Conversation'
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'RCVD', ''))) / 4
+			ELSE 0
+			END AS TextsReceived,
+		a.*
+	FROM (
+		SELECT A.accountid,
+			PC.EmailBody,
+			A.OwnerID AS AccountOwnerID,
+			A.OwnerIDname AS AccountOwnerName,
+			PC.ownerid AS ActivityOwnerID,
+			Assoc.USR_First + ' ' + Assoc.USR_Last AS ActivityOwnerName,
+			A.ksl_CommunityId AS CommunityId,
+			A.ksl_CommunityIdName AS CommunityIdName,
+			PC.Subject AS ActivitySubject,
+			PC.ActivityTypeCode AS ActivityType,
+			NULL AS ActivityTypeDetail,
+			PC.scheduledstart AS CompletedDate,
+			PC.ksl_resultoptions_displayname AS Rslt,
+			PC.activityid,
+			PC.description AS notes
+		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK)
+		JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
+		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
+		) a
+	)
+-- SELECT *
+-- FROM AllActivities
+-- WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC' -- Byron Park
+-- 	AND CONVERT(DATE, CompletedDate) >= '2025-09-16'
+-- 	AND ActivityType LIKE '%Text Message%'
 )
 
 SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by completeddate) = 1 then 1 else 0 end as lead  -- js 5/18
@@ -332,20 +324,20 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		END AS Appointment
 	,CASE 
 		WHEN ActivityType = 'Inbound Email'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Sent_Messages_Biz_Dev
 	,CASE 
 		WHEN activitytype = 'Outbound Text Message' -- TODO do all non biz dev need AccountStatus = 'Lead'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			AND ksl_textssent > 0
 			THEN ksl_textssent
 		ELSE 0
 		END AS TextSent_Biz_Dev
 	,CASE 
 		WHEN activitytype = 'Inbound Text Message'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			AND ksl_textsreceived > 0
 			THEN ksl_textsreceived
 		ELSE 0
@@ -354,14 +346,14 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		WHEN ActivityType LIKE '%phone%'
 			AND activitytype <> 'Committed Phone Appointment'
 			AND Rslt = 'Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Completed_Phone_Calls_Biz_Dev
 	,CASE 
 		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
 			AND Rslt = 'Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Appointment_Biz_Dev
@@ -379,7 +371,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 			AND ActivityTypeDetail <> 'Incoming Phone Call'
 			AND Rslt <> 'CANC - Cancelled'
 			AND Rslt <> 'COMP - Completed'
-			AND AccountStatus LIKE = 'referral org%'
+			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Phone_Call_Attempted_Biz_Dev
@@ -461,3 +453,173 @@ FROM (
 WHERE a.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'  -- Byron Park
   AND CONVERT(date, a.CompletedDate) >= '2025-09-16'
   AND a.ActivityType LIKE '%Text Message%';   -- include Outbound/Inbound/Conversation
+
+-- TAKE 4
+WITH lastce AS (
+  SELECT
+      b.subject            AS ActivitySubject
+    , b.activitytypecode   AS LCEType
+    -- , b.activitytypedetail AS LCETypeDetail
+    , b.regardingobjectid
+    , b.createdon          AS LastCEDate
+    , b.notes              AS LCENotes
+    , b.activityid
+  FROM (
+    SELECT
+        pc.activityid
+      , pc.subject
+      , pc.activitytypecode
+      -- , pc.ksl_appointmenttype AS ActivityTypeDetail
+      , pc.createdon
+      , pc.regardingobjectid
+      , pc.scheduledstart   AS CompletedDate
+      , LEFT(pc.description, 300) AS notes
+    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities pc WITH (NOLOCK)
+    WHERE pc.statuscode_displayname = 'Completed'
+      AND ( pc.activitytypecode LIKE '%face appointment%'
+            OR pc.activitytypecode LIKE '%walk-in%' )
+  ) AS b
+),
+AllActivities AS (
+	-- In activitypecode = 'Text Message Conversation' let's tally the number of times the word SENT or RCVD appears in the text body
+	SELECT CASE 
+			WHEN a.ActivityType IN ('Outgoing Text Message')
+				THEN 1
+			WHEN a.ActivityType = 'Inbound Text Message'
+				THEN 0
+			WHEN a.ActivityType = 'Text Message Conversation'
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'SENT  [', ''))) / 7
+			ELSE 0
+			END AS TextSent,
+		CASE 
+			WHEN a.ActivityType IN ('Outgoing Text Message')
+				THEN 0
+			WHEN a.ActivityType = 'Inbound Text Message'
+				THEN 1
+			WHEN a.ActivityType = 'Text Message Conversation'
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'RCVD  [', ''))) / 7
+			ELSE 0
+			END AS TextReceived,
+		a.*
+	FROM (
+		SELECT A.accountid,
+			PC.EmailBody,
+			A.OwnerID AS AccountOwnerID,
+			A.OwnerIDname AS AccountOwnerName,
+			PC.ownerid AS ActivityOwnerID,
+			Assoc.USR_First + ' ' + Assoc.USR_Last AS ActivityOwnerName,
+			A.ksl_CommunityId AS CommunityId,
+			A.ksl_CommunityIdName AS CommunityIdName,
+			PC.Subject AS ActivitySubject,
+			PC.ActivityTypeCode AS ActivityType,
+			NULL AS ActivityTypeDetail,
+			PC.scheduledstart AS CompletedDate,
+			PC.ksl_resultoptions_displayname AS Rslt,
+			PC.activityid,
+			PC.description AS notes,
+			A.statuscode_displayname AS AccountStatus,
+			NULL AS ksl_textssent, -- TODO make sure can remove
+			NULL AS ksl_textsreceived -- TODO make sure can remove
+		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK)
+		JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
+		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
+		) a
+)
+
+SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by completeddate) = 1 then 1 else 0 end as lead  -- js 5/18
+	--,ROW_NUMBER() over (partition by accountid order by completeddate) row
+	,CASE 
+		WHEN activitytype LIKE '%phone%'
+		AND activitytype <> 'Committed Phone Appointment'
+			AND rslt = 'Completed'
+			THEN 1
+		ELSE 0
+		END AS Completed_Phone_Calls
+	,CASE 
+		WHEN activitytype IN ('Incoming Phone Call')
+			AND rslt = 'Completed'
+			THEN 1
+		ELSE 0
+		END AS Completed_Incoming_Phone_Calls
+	,CASE 
+		WHEN activitytype IN ('Outbound Email', 'Letter')
+			THEN 1
+		ELSE 0
+		END AS Sent_Messages
+	,CASE 
+		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
+			THEN 1
+		ELSE 0
+		END AS Appointment
+	,CASE 
+		WHEN ActivityType = 'Inbound Email'
+			AND AccountStatus LIKE 'referral org%'
+			THEN 1
+		ELSE 0
+		END AS Sent_Messages_Biz_Dev
+	,CASE 
+		WHEN activitytype = 'Outbound Text Message'
+			AND AccountStatus LIKE 'referral org%'
+			THEN TextSent
+		ELSE 0
+		END AS TextSent_Biz_Dev
+	,CASE 
+		WHEN activitytype = 'Inbound Text Message'
+			AND AccountStatus LIKE 'referral org%'
+			THEN TextReceived
+		ELSE 0
+		END AS TextReceived_Biz_Dev
+	,CASE 
+		WHEN ActivityType LIKE '%phone%'
+			AND activitytype <> 'Committed Phone Appointment'
+			AND Rslt = 'Completed'
+			AND AccountStatus LIKE 'referral org%'
+			THEN 1
+		ELSE 0
+		END AS Completed_Phone_Calls_Biz_Dev
+	,CASE 
+		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
+			AND Rslt = 'Completed'
+			AND AccountStatus LIKE 'referral org%'
+			THEN 1
+		ELSE 0
+		END AS Appointment_Biz_Dev
+	,CASE 
+		WHEN ActivityType IN ('In-Person Appointment', 'Committed Face Appointment', 'Unscheduled Walk-In')
+			AND Rslt = 'Completed'
+			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
+			THEN 1
+		ELSE 0
+		END AS Community_Experience
+	,0 AS Virtual_Community_Experience --non existant field
+	,CASE 
+		WHEN activitytype LIKE '%phone%'
+		AND activitytype <> 'Committed Phone Appointment'
+			AND ActivityTypeDetail <> 'Incoming Phone Call'
+			AND Rslt <> 'CANC - Cancelled'
+			AND Rslt <> 'COMP - Completed'
+			AND AccountStatus LIKE 'referral org%'
+			THEN 1
+		ELSE 0
+		END AS Phone_Call_Attempted_Biz_Dev
+	,CASE 
+		WHEN activitytype LIKE '%phone%'
+		AND activitytype <> 'Committed Phone Appointment'
+			AND ActivityTypeDetail <> 'Incoming Phone Call'
+			AND Rslt <> 'Cancelled'
+			AND Rslt <> 'Completed'
+			THEN 1
+		ELSE 0
+		END AS Phone_Call_Attempted
+	,TextSent
+	,TextReceived
+FROM AllActivities AS x
+OUTER APPLY (
+	SELECT TOP 1 *
+	FROM lastce
+	WHERE X.accountid = lastce.regardingobjectid
+	ORDER BY lastce.lastcedate ASC
+	) FCE
+WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
+  AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
+ORDER BY x.CompletedDate DESC;
