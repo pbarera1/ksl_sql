@@ -1,8 +1,8 @@
--- use KSLCLOUD_MSCRM;
--- declare @AsOfDate date
--- declare @comm uniqueidentifier
--- set @AsOfDate = '3/31/25'
--- set @comm = 'ef0600c1-95ba-ec11-983f-000d3a5c5e3e'  ;
+USE KSLCLOUD_MSCRM_RESTORE_TEST;
+DECLARE @AsOfDate DATE
+DECLARE @comm UNIQUEIDENTIFIER
+SET @AsOfDate = '3/31/25'
+SET @comm = 'ef0600c1-95ba-ec11-983f-000d3a5c5e3e';
 
 WITH t
 AS (
@@ -297,7 +297,9 @@ SELECT t.*
 FROM t
 INNER JOIN ksl_community c ON t.ksl_communityid = c.ksl_communityid
 JOIN DataWarehouse..Dim_Community dc ON c.ksl_communityid = dc.ksl_communityid
-INNER JOIN systemuser u ON u.systemuserid = ownerid
+INNER JOIN KiscoCustom.dbo.Associate u ON u.SalesAppID = ownerid
+LEFT JOIN KiscoCustom.dbo.KSL_Roles r -- UPDATED (get role name for title filtering)
+	ON r.RoleID = u.RoleID
 WHERE (
 		t.ksl_communityid = @comm
 		OR (
@@ -305,7 +307,7 @@ WHERE (
 			AND isactivecommunity = 'yes'
 			)
 		)
-	AND u.title NOT LIKE '%resident%'
-	AND u.title NOT LIKE '%hospitality%'
+	AND r.Name NOT LIKE '%resident%'
+	AND r.Name NOT LIKE '%hospitality%'
 --and  ( ksl_communityid  not in ('39C35920-B2DE-E211-9163-0050568B37AC','29C35920-B2DE-E211-9163-0050568B37AC','119C1A08-0142-E511-96FE-0050568B37AC'))
 ORDER BY community
