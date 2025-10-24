@@ -26,8 +26,11 @@ AS (
 			,left(PC.description, 300) AS notes
 		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
+		-- all activities except sms, task
 		WHERE PC.activitytypecode NOT LIKE '%text%'
+		AND PC.activitytypecode <> 'Task'
 		AND PC.statuscode_displayname = 'Completed'
+		AND PC.ksl_resultoptions_displayname <> 'Cancelled'
 		) AS b
 	INNER JOIN kslcloud_mscrm.dbo.contact a WITH (NOLOCK) ON b.RegardingObjectId = a.contactid
 	WHERE YEAR(CompletedDate) = @Year -- Filter by the selected year
@@ -363,13 +366,13 @@ SELECT u.USR_First + ' ' + u.USR_Last AS fullname
 			THEN 'Executive Director'
 		ELSE 'Sales'
 		END Title
-	,commCrm.ksl_regionidname
+	,commCrm.ksl_regionidname AS ksl_regionalteamidname
 	,a.*
-	,newleadsavg
-	,nrr.rentrev RentRevYTD
-	,mi.moveinavg
-	,nr.rsourceavg
-	,rravg
+	,newLeadsavg
+	,nrr.RentRev RentRevYTD
+	,mi.MoveInavg
+	,nr.RSourceAvg
+	,RRAvg
 	,commCrm.ksl_regionid
 FROM actsum a
 INNER JOIN [KiscoCustom].[dbo].[Associate] u ON u.SalesAppID = a.accountownerid

@@ -1,5 +1,5 @@
 USE KSLCLOUD_MSCRM_RESTORE_TEST;
-DECLARE @DimUserFullName NVARCHAR(4000) = 'robin howland';
+DECLARE @DimUserFullName NVARCHAR(4000) = '[Dim_User].[FullName].&[Mike Jacobs]';
 SELECT isnull(sum(ksl_ACT_CommTransFee + new_ApartmentRate - ISNULL(est.ksl_ACT_CommTransFeeSpecial, 0)), 0) AS Rent_Revenue_from_Resident,
 	count(y.ksl_ApartmentId) AS Move_Ins___CRM
 FROM (

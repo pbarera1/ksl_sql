@@ -1,4 +1,4 @@
-DECLARE @DimUserFullName NVARCHAR(4000) = 'Mike Jacobs';
+--DECLARE @DimUserFullName NVARCHAR(4000) = '[Dim_User].[FullName].&[Mike Jacobs]';
 
 SELECT convert(VARCHAR(50), month(isnull(ksl_BeginDate, est.ksl_schfinanmovein))) + '/1/' + convert(VARCHAR(50), year(isnull(ksl_BeginDate, est.ksl_schfinanmovein))) AS dt,
 	isnull(sum(ksl_ACT_CommTransFee + new_ApartmentRate - ISNULL(est.ksl_ACT_CommTransFeeSpecial, 0)), 0) AS RentRev,

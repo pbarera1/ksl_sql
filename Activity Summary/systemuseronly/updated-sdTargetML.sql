@@ -1,6 +1,6 @@
 USE DataWarehouse
 declare @DimUserFullName varchar (100)
-set @DimUserFullName = 'Michelle Taylor'
+set @DimUserFullName = '[Dim_User].[FullName].&[Erika McMillin]'
 SELECT x.GroupedShortName,
 	z.fullname,
 	x.SDs,

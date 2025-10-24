@@ -1,5 +1,5 @@
 USE KSLCLOUD_MSCRM_RESTORE_TEST;
-DECLARE @DimUserFullName NVARCHAR(4000) = 'robin howland';
+DECLARE @DimUserFullName NVARCHAR(4000) = '[Dim_User].[FullName].&[Mike Jacobs]';
 WITH LastContact
 AS (
 	SELECT b.accountid,
@@ -14,52 +14,16 @@ AS (
 		SELECT L.accountid,
 			PC.Subject,
 			PC.ActivityTypeCode,
-			PC.ksl_phonecalltype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.ksl_datecompleted AS CompletedDate,
-			left(PC.description, 300) AS notes
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed' --Workflow changed call to completed
-			AND PC.ksl_resultoptions = '864960007' --Result: Completed
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_appointmenttype AS ActivityTypeDetail,
+			PC.ActivityTypeCode AS ActivityTypeDetail,
 			PC.regardingobjectid,
 			PC.scheduledstart AS CompletedDate,
 			left(PC.description, 300) AS notes
 		FROM Account L WITH (NOLOCK)
-		INNER JOIN appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed'
-			AND PC.ksl_resultoptions IN (
-				'864960005',
-				'864960004',
-				'864960006'
-				) --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_emailtype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.actualend AS CompletedDate,
-			left(PC.description, 300) AS notes
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed'
-			AND PC.ksl_emailtype = '864960001' --incoming
-			--Union All
-			--SELECT L.accountid, RIGHT(PC.Subject, LEN(PC.Subject) - 13) as [Subject], 'sms' as ActivityTypeCode, NULL as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, left(PC.description,300) as notes
-			--FROM Account L WITH (NOLOCK)
-			--INNER JOIN txtsync_sms PC ON PC.RegardingObjectId = L.accountid
-			--WHERE  
-			--[from] <> '' --incoming sms
+		INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+		-- phonecall, appointment, inbound email - activities
+		WHERE PC.activitytypecode IN ('Outbound Phone Call', 'Incoming Phone Call', 'Committed Face Appointment', 'Unscheduled Walk-In', 'Inbound Email')
+			AND PC.statuscode_displayname = 'Completed'
+			AND PC.ksl_resultoptions_displayname = 'Completed'
 		) AS b
 	),
 NextActivity
@@ -70,7 +34,7 @@ AS (
 		b.ActivityTypeCode AS NAType,
 		b.ActivityTypeDetail AS NATypeDetail,
 		b.regardingobjectid,
-		b.scheduledend AS NextActivityDate,
+		b.scheduledstart AS NextActivityDate,
 		b.notes AS NANotes,
 		b.activityid AS NAActivityid,
 		b.ownerid
@@ -78,76 +42,18 @@ AS (
 		SELECT L.accountid,
 			PC.Subject,
 			PC.ActivityTypeCode,
-			PC.ksl_phonecalltype AS ActivityTypeDetail,
+			PC.ActivityTypeCode AS ActivityTypeDetail,
 			PC.regardingobjectid,
-			PC.scheduledend,
+			PC.scheduledstart,
 			left(PC.description, 300) AS notes,
 			PC.activityid,
 			PC.ownerid
 		FROM Account L WITH (NOLOCK)
-		INNER JOIN PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE --PC.actualend IS NULL AND PC.scheduledend IS NOT NULL
-			PC.statecode_displayname <> 'Completed'
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_appointmenttype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.scheduledstart AS scheduledend,
-			left(PC.description, 300) AS notes,
-			PC.activityid,
-			PC.ownerid
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname <> 'Completed'
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			NULL AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.scheduledend,
-			left(PC.description, 300) AS notes,
-			PC.activityid,
-			PC.ownerid
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN task PC ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname <> 'Completed'
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_lettertype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.scheduledend,
-			left(PC.description, 300) AS notes,
-			PC.activityid,
-			PC.ownerid
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN letter PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname <> 'Completed'
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_emailtype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.scheduledend,
-			left(PC.description, 300) AS notes,
-			PC.activityid,
-			PC.ownerid
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname <> 'Completed'
+		INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+		-- phonecall, appointment,letter, tasks, email - activities
+		WHERE (PC.activitytypecode IN ('Outbound Phone Call', 'Incoming Phone Call', 'Committed Face Appointment', 'Unscheduled Walk-In', 'Letter', 'Task')
+			OR (PC.activitytypecode LIKE '%email%'))
+			AND PC.statuscode_displayname <> 'Completed'
 		) AS b
 	),
 LastAttempt
@@ -164,59 +70,17 @@ AS (
 		SELECT L.accountid,
 			PC.Subject,
 			PC.ActivityTypeCode,
-			PC.ksl_phonecalltype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.ksl_datecompleted AS CompletedDate,
-			left(PC.description, 300) AS notes
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed' --Workflow changed call to completed
-			AND PC.ksl_resultoptions <> '864960008' --Result: Anything but cancelled
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_appointmenttype AS ActivityTypeDetail,
+			PC.ActivityTypeCode AS ActivityTypeDetail,
 			PC.regardingobjectid,
 			PC.scheduledstart AS CompletedDate,
 			left(PC.description, 300) AS notes
+
 		FROM Account L WITH (NOLOCK)
-		INNER JOIN appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed'
-			AND PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled 
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_emailtype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.actualend AS CompletedDate,
-			left(PC.description, 300) AS notes
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed'
-			AND PC.ksl_emailtype = '864960002' --Outgoing
-		
-		UNION ALL
-		
-		SELECT L.accountid,
-			PC.Subject,
-			PC.ActivityTypeCode,
-			PC.ksl_lettertype AS ActivityTypeDetail,
-			PC.regardingobjectid,
-			PC.actualend AS CompletedDate,
-			left(PC.description, 300) AS notes
-		FROM Account L WITH (NOLOCK)
-		INNER JOIN letter PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-		WHERE PC.statecode_displayname = 'Completed'
-			--Union All
-			--SELECT L.accountid, RIGHT(PC.Subject, LEN(PC.Subject) - 13) as [Subject], 'sms' as ActivityTypeCode, NULL as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, left(PC.description,300) as notes
-			--FROM Account L WITH (NOLOCK)
-			--INNER JOIN txtsync_sms PC ON PC.RegardingObjectId = L.accountid
+		INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+		WHERE (PC.activitytypecode IN ('Outbound Phone Call', 'Incoming Phone Call', 'Committed Face Appointment', 'Unscheduled Walk-In', 'Outbound Email', 'Letter')
+			OR (PC.activitytypecode LIKE '%email%'))
+			AND PC.statuscode_displayname = 'Completed'
+			AND PC.ksl_resultoptions_displayname <> 'Cancelled'
 		) AS b
 	)
 SELECT count(A.accountID) AS RADcount

@@ -1,7 +1,7 @@
 USE DataWarehouse;
 
--- DECLARE @StartDate DATE = '5/17/2025'; -- Replace with your start date
--- DECLARE @EndDate DATE = '6/16/2025'; -- Replace with your end date
+DECLARE @StartDate DATE = '5/17/2025'; -- Replace with your start date
+DECLARE @EndDate DATE = '6/16/2025'; -- Replace with your end date
 WITH BaseData
 AS (
 	SELECT a.CommunityId
@@ -14,8 +14,8 @@ AS (
 		,a.isSalesMail
 		,a.activityCreatedBy
 		,LTRIM(RTRIM(s.USR_First + ' ' + s.USR_Last)) AS fullname
-		s.SalesAppID AS BookerOwnerid
-		c.GroupedShortName
+		,s.SalesAppID AS BookerOwnerid
+		,c.GroupedShortName
 		,'CommpletedAppt' AS Source
 		,acc.ksl_donotcontactreason
 		,-- Include the do not contact reason
@@ -97,8 +97,8 @@ AS (
 					,' '
 					,s.USR_Last
 					))) AS fullname
-		s.SalesAppID BookerOwnerid
-		c.GroupedShortName
+		,s.SalesAppID BookerOwnerid
+		,c.GroupedShortName
 		,'BookedAppt' AS Source
 		,a.ksl_donotcontactreason
 		,-- Include the do not contact reason
