@@ -1,6 +1,4 @@
--- TAKE 2
 USE DataWarehouse;
-
 DECLARE @c NVARCHAR(4000) = '119C1A08-0142-E511-96FE-0050568B37AC';--La Posada
 
 SELECT fullname Label
@@ -45,44 +43,18 @@ FROM dim_user
 WHERE systemuserid IN (
 		SELECT DISTINCT ownerid
 		FROM (
-			SELECT act.ownerid
+			SELECT DISTINCT act.ownerid
+			-- systemuserid for users with an activity on a Referral Org account
 			FROM KSLCLOUD_MSCRM_RESTORE_TEST..activities act
-			--INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK) ON A.accountid = act.RegardingObjectId
-			INNER JOIN kslcloud_mscrm..contact LD ON act.regardingobjectid = ld.contactid
-			INNER JOIN kslcloud_mscrm..ksl_referralorgs r ON LD.ksl_referralorgid = r.ksl_referralorgsid
-
-			-- ??? The activity is tied to a contact that has a referral organization (ksl_referralorgs) ???
-	
-			--WHERE A.statuscode_displayname LIKE 'referral org%'
-			--AND A.statecode = 0 --active
-			AND act.activitytypecode IN ('Committed Face Appointment', 'Unscheduled Walk-In', 'Outgoing Phone Call', 'Incoming Phone Call', 'phonecall')
-				AND (
-					(
-						SELECT TOP 1 ksl_name
-						FROM kslcloud_mscrm..ksl_community
-						WHERE ksl_communityid IN (@c)
-						) IN (
-						SELECT u1.NAME
-						FROM kslcloud_mscrm..businessunit u
-						LEFT JOIN kslcloud_mscrm..businessunitmap m ON u.businessunitid = m.businessid
-						LEFT JOIN kslcloud_mscrm..businessunit u1 ON u1.businessunitid = m.subbusinessid
-						WHERE 
-							u.businessunitid = (
-								SELECT TOP 1 businessunitid
-								FROM kslcloud_mscrm..team
-								WHERE teamid = r.ownerid
-								)
-							OR 
-							u.businessunitid = (
-								SELECT ksl_securityregionteamid AS ksl_regionalteamid
-								FROM KiscoCustom..Associate a
-								JOIN  KiscoCustom..Community as c ON c.CommunityIDY = a.USR_CommunityIDY
-								JOIN KSLCLOUD_MSCRM..ksl_community as commCrm ON commCrm.ksl_communityid = c.CRM_CommunityID
-								WHERE a.SalesAppID = r.ownerid
-								)
-						)
-					)
-			--AND act.scheduledstart BETWEEN Getdate() - 45 AND Getdate() + 14 --This line removes all results (45 days in past or 14 days in future)
-			AND r.ksl_referralorgtypeidname <> 'Paid Referral Agency'
+			INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK) ON A.accountid = act.RegardingObjectId
+			INNER JOIN KiscoCustom.dbo.Associate AS u ON u.SalesAppID = act.ownerid
+			JOIN KiscoCustom.dbo.Community as c ON c.CommunityIDY = u.USR_CommunityIDY
+			JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community as comm ON comm.ksl_communityid = c.CRM_CommunityID
+			-- ksl_community region col matches the region for @c (ex. la posada)
+			WHERE comm.ksl_regionid = (SELECT TOP 1 ksl_regionid FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community WHERE ksl_communityid = '119C1A08-0142-E511-96FE-0050568B37AC')
+			--AND A.statuscode_displayname LIKE 'referral org%' -- brings results to 0
+			AND A.statecode = 0 --active
+			AND act.scheduledstart BETWEEN getdate() - 45 AND getdate() + 14
+			AND act.activitytypecode IN ('Committed Face Appointment', 'Unscheduled Walk-In', 'Outgoing Phone Call', 'Incoming Phone Call')
 			) k
 		)

@@ -423,8 +423,8 @@ OUTER APPLY (
 	) FCE
 
 --TESTING
---WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
---AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
---ORDER BY x.CompletedDate DESC;
+WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
+AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
+ORDER BY x.CompletedDate DESC;
 GO
 

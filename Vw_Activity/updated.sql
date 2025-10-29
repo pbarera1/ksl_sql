@@ -93,7 +93,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
 			THEN 1
 		ELSE 0
-		END AS Community_Experience --TODO remove or set as 0
+		END AS Community_Experience
 	,0 AS Virtual_Community_Experience -- TODO remove or set as 0
 	,CASE 
 		WHEN activitytype = 'Outgoing Phone Call'
@@ -178,7 +178,7 @@ FROM (
 		,a.ksl_communityidname AS CommunityIdName
 		,b.subject AS ActivitySubject
 		,b.activitytypecode + ' BD' AS ActivityType
-		,NULL AS ActivityTypeDetail
+		,CAST(NULL AS int) AS ActivityTypeDetail
 		,isnull(dateadd(hour, (
 			SELECT com.[ksl_utctimeadjust]
 			FROM [KSLCLOUD_MSCRM].[dbo].[ksl_community] com
@@ -280,7 +280,7 @@ AS (
 			A.ksl_CommunityIdName AS CommunityIdName,
 			PC.Subject AS ActivitySubject,
 			PC.ActivityTypeCode AS ActivityType,
-			NULL AS ActivityTypeDetail,
+			CAST(NULL AS int) AS ActivityTypeDetail,
 			PC.scheduledstart AS CompletedDate,
 			PC.ksl_resultoptions_displayname AS Rslt,
 			PC.activityid,
@@ -435,7 +435,7 @@ FROM (
       A.ksl_CommunityIdName   AS CommunityIdName,
       PC.Subject              AS ActivitySubject,
       PC.ActivityTypeCode     AS ActivityType,
-      NULL                    AS ActivityTypeDetail,
+      CAST(NULL AS int)       AS ActivityTypeDetail,
       PC.scheduledstart       AS CompletedDate,
       PC.ksl_resultoptions_displayname AS Rslt,
       PC.activityid,
@@ -512,14 +512,14 @@ AllActivities AS (
 			A.ksl_CommunityIdName AS CommunityIdName,
 			PC.Subject AS ActivitySubject,
 			PC.ActivityTypeCode AS ActivityType,
-			NULL AS ActivityTypeDetail,
+			CAST(NULL AS int) AS ActivityTypeDetail,
 			PC.scheduledstart AS CompletedDate,
 			PC.ksl_resultoptions_displayname AS Rslt,
 			PC.activityid,
 			PC.description AS notes,
-			A.statuscode_displayname AS AccountStatus,
-			NULL AS ksl_textssent, -- TODO make sure can remove
-			NULL AS ksl_textsreceived -- TODO make sure can remove
+			A.statuscode_displayname AS AccountStatus
+			--NULL AS ksl_textssent, -- TODO make sure can remove
+			--NULL AS ksl_textsreceived -- TODO make sure can remove
 		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK)
 		JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
 		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
@@ -528,6 +528,9 @@ AllActivities AS (
 
 SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by completeddate) = 1 then 1 else 0 end as lead  -- js 5/18
 	--,ROW_NUMBER() over (partition by accountid order by completeddate) row
+	    -- Put these first, mapped to the computed values
+    ,ksl_textssent     = x.TextSent
+    ,ksl_textsreceived = x.TextReceived
 	,CASE 
 		WHEN activitytype LIKE '%phone%'
 		AND activitytype <> 'Committed Phone Appointment'
@@ -611,8 +614,6 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 			THEN 1
 		ELSE 0
 		END AS Phone_Call_Attempted
-	,TextSent
-	,TextReceived
 FROM AllActivities AS x
 OUTER APPLY (
 	SELECT TOP 1 *

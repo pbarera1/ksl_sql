@@ -18,7 +18,7 @@ WITH AllActivities AS (
         A.ksl_CommunityIdName as CommunityIdName,
         PC.Subject as ActivitySubject,
         PC.ActivityTypeCode as ActivityType,
-        NULL as ActivityTypeDetail,
+        CAST(NULL AS int) as ActivityTypeDetail,
         PC.scheduledstart as CompletedDate,
         PC.ksl_resultoptions_displayname as Rslt,
         PC.activityid,
@@ -180,7 +180,7 @@ WITH AllActivities AS (
         A.ksl_CommunityIdName         AS CommunityIdName,
         PC.Subject                    AS ActivitySubject,
         PC.ActivityTypeCode           AS ActivityType,
-        NULL                          AS ActivityTypeDetail,     -- will override for text tokens
+        CAST(NULL AS int)             AS ActivityTypeDetail,     -- will override for text tokens
         PC.scheduledstart             AS CompletedDate,
         PC.ksl_resultoptions_displayname AS Rslt,                -- will override for text tokens
         PC.activityid,
