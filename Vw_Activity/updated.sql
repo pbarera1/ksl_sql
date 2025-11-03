@@ -512,7 +512,7 @@ AllActivities AS (
 			A.ksl_CommunityIdName AS CommunityIdName,
 			PC.Subject AS ActivitySubject,
 			PC.ActivityTypeCode AS ActivityType,
-			CAST(NULL AS int) AS ActivityTypeDetail,
+			NULL AS ActivityTypeDetail,
 			PC.scheduledstart AS CompletedDate,
 			PC.ksl_resultoptions_displayname AS Rslt,
 			PC.activityid,
