@@ -599,8 +599,8 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		WHEN activitytype LIKE '%phone%'
 		AND activitytype <> 'Committed Phone Appointment'
 			AND ActivityTypeDetail <> 'Incoming Phone Call'
-			AND Rslt <> 'CANC - Cancelled'
-			AND Rslt <> 'COMP - Completed'
+			AND Rslt <> 'Cancelled'
+			AND Rslt <> 'Completed'
 			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
