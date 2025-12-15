@@ -533,7 +533,6 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
     ,ksl_textsreceived = x.TextReceived
 	,CASE 
 		WHEN activitytype LIKE '%phone%'
-		AND activitytype <> 'Committed Phone Appointment'
 			AND COALESCE(Rslt, '') = 'Completed'
 			THEN 1
 		ELSE 0
