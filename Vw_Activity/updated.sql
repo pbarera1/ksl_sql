@@ -483,7 +483,7 @@ WITH lastce AS (
 AllActivities AS (
 	-- In activitypecode = 'Text Message Conversation' let's tally the number of times the word SENT or RCVD appears in the text body
 	SELECT CASE 
-			WHEN a.ActivityType IN ('Outgoing Text Message')
+			WHEN a.ActivityType IN ('Outbound Text Message')
 				THEN 1
 			WHEN a.ActivityType = 'Inbound Text Message'
 				THEN 0
@@ -492,7 +492,7 @@ AllActivities AS (
 			ELSE 0
 			END AS TextSent,
 		CASE 
-			WHEN a.ActivityType IN ('Outgoing Text Message')
+			WHEN a.ActivityType IN ('Outbound Text Message')
 				THEN 0
 			WHEN a.ActivityType = 'Inbound Text Message'
 				THEN 1
