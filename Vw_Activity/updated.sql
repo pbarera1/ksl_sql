@@ -534,13 +534,13 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 	,CASE 
 		WHEN activitytype LIKE '%phone%'
 		AND activitytype <> 'Committed Phone Appointment'
-			AND rslt = 'Completed'
+			AND COALESCE(Rslt, '') = 'Completed'
 			THEN 1
 		ELSE 0
 		END AS Completed_Phone_Calls
 	,CASE 
 		WHEN activitytype IN ('Incoming Phone Call')
-			AND rslt = 'Completed'
+			AND COALESCE(Rslt, '') = 'Completed'
 			THEN 1
 		ELSE 0
 		END AS Completed_Incoming_Phone_Calls
@@ -575,21 +575,21 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 	,CASE 
 		WHEN ActivityType LIKE '%phone%'
 			AND activitytype <> 'Committed Phone Appointment'
-			AND Rslt = 'Completed'
+			AND COALESCE(Rslt, '') = 'Completed'
 			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Completed_Phone_Calls_Biz_Dev
 	,CASE 
 		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
-			AND Rslt = 'Completed'
+			AND COALESCE(Rslt, '') = 'Completed'
 			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
 		END AS Appointment_Biz_Dev
 	,CASE 
 		WHEN ActivityType IN ('In-Person Appointment', 'Committed Face Appointment', 'Unscheduled Walk-In')
-			AND Rslt = 'Completed'
+			AND COALESCE(Rslt, '') = 'Completed'
 			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
 			THEN 1
 		ELSE 0
@@ -598,9 +598,9 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 	,CASE 
 		WHEN activitytype LIKE '%phone%'
 		AND activitytype <> 'Committed Phone Appointment'
-			AND ActivityTypeDetail <> 'Incoming Phone Call'
-			AND Rslt <> 'Cancelled'
-			AND Rslt <> 'Completed'
+			AND COALESCE(ActivityTypeDetail, '') <> 'Incoming Phone Call'
+			AND COALESCE(Rslt, '') <> 'Cancelled'
+			AND COALESCE(Rslt, '') <> 'Completed'
 			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
@@ -608,9 +608,9 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 	,CASE 
 		WHEN activitytype LIKE '%phone%'
 		AND activitytype <> 'Committed Phone Appointment'
-			AND ActivityTypeDetail <> 'Incoming Phone Call'
-			AND Rslt <> 'Cancelled'
-			AND Rslt <> 'Completed'
+			AND COALESCE(ActivityTypeDetail, '') <> 'Incoming Phone Call'
+			AND COALESCE(Rslt, '') <> 'Cancelled'
+			AND COALESCE(Rslt, '') <> 'Completed'
 			THEN 1
 		ELSE 0
 		END AS Phone_Call_Attempted
@@ -621,6 +621,7 @@ OUTER APPLY (
 	WHERE X.accountid = lastce.regardingobjectid
 	ORDER BY lastce.lastcedate ASC
 	) FCE
-WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
-  AND x.CompletedDate >= DATEADD(MONTH, -1, GETDATE())
+-- TESTING
+-- WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
+-- WHERE x.CompletedDate >= DATEADD(DAY, -1, GETDATE())
 ORDER BY x.CompletedDate DESC;
