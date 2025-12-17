@@ -31,8 +31,8 @@ WITH AllActivities AS (
         PC.ownerid AS CreatedBy,
         PC.ownerid AS activityCreatedBy
         --Assoc.USR_First + ' ' + Assoc.USR_Last AS CreatedBy,
-    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account A WITH (NOLOCK)
-    INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) 
+    FROM KSLCLOUD_MSCRM.dbo.Account A WITH (NOLOCK)
+    INNER JOIN KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK) 
         ON PC.RegardingObjectId = A.accountid
     --LEFT JOIN KiscoCustom.dbo.Associate Assoc ON A.ownerid = Assoc.SalesAppID
 )
@@ -86,8 +86,8 @@ WITH Filtered AS (
       CAST(NULL AS varchar(50)) AS google_campaignID,
       PC.ownerid              AS activityCreatedBy,
       PC.EmailBody
-  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
-  JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+  FROM KSLCLOUD_MSCRM.dbo.Account    AS A WITH (NOLOCK)
+  JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK)
     ON PC.RegardingObjectId = A.accountid
   --WHERE A.ksl_CommunityId = @CommunityId
     WHERE CONVERT(date, PC.scheduledstart) = @FromDate
@@ -182,20 +182,23 @@ WITH AllActivities AS (
         PC.ActivityTypeCode           AS ActivityType,
         CAST(NULL AS int)             AS ActivityTypeDetail,
         PC.scheduledstart             AS CompletedDate,
-        PC.ksl_resultoptions_displayname AS Rslt,                -- TODO should be Result? And should this say Completed or Text Sent/Received for inbound/outbound sms to match conversation
+        CASE 
+            WHEN PC.ActivityTypeCode = 'Outgoing Text Message' THEN 'Text Sent'
+            WHEN PC.ActivityTypeCode = 'Incoming Text Message' THEN 'Text Recieved'
+            ELSE PC.ksl_resultoptions_displayname
+        END AS Rslt,
         PC.activityid,
         PC.description                AS notes,
         CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
         CAST(NULL AS varchar(50))     AS google_campaignID,
-        PC.ownerid                    AS CreatedBy,
         PC.ownerid                    AS activityCreatedBy,
         PC.EmailBody
-    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
-    JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+    FROM KSLCLOUD_MSCRM.dbo.Account    AS A WITH (NOLOCK)
+    JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK)
       ON PC.RegardingObjectId = A.accountid
 ),
--- One row per conversation activity (no longer splitting into separate rows)
+-- Add Sent/Recieved notes for text conversations
 TextConversationEvents AS (
     SELECT
         a.accountid,
@@ -205,7 +208,7 @@ TextConversationEvents AS (
         a.CommunityIdName,
         a.ActivitySubject,
         a.ActivityType,
-        -- Check if EmailBody starts with SENT or RCVD pattern (prioritize SENT over RCVD if both exist)
+        -- Check if EmailBody starts with SENT or RCVD pattern
         CASE 
             WHEN LEFT(COALESCE(a.EmailBody, a.notes, ''), 4) = 'SENT' THEN 1002 
             WHEN LEFT(COALESCE(a.EmailBody, a.notes, ''), 4) = 'RCVD' THEN 1001 
@@ -238,7 +241,7 @@ NonConversation AS (
         CommunityIdName,
         ActivitySubject,
         ActivityType,
-        ActivityTypeDetail,   -- stays NULL (or original) for non-text
+        ActivityTypeDetail,   -- stays NULL for non-text, old value was number like 864960001, maybe we can remove
         CompletedDate,
         Rslt,
         activityid,
@@ -275,7 +278,7 @@ SELECT
     activityCreatedBy
 FROM TextConversationEvents
 
--- Optional filters
+--TESTING filters
 -- WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'
 --   AND CompletedDate >= DATEADD(MONTH, -1, GETDATE())
 ORDER BY activityid, CompletedDate;

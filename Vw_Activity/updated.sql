@@ -18,7 +18,7 @@ AS (
 			,PC.regardingobjectid
 			,PC.scheduledstart AS CompletedDate
 			,LEFT(PC.description, 300) AS notes
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
+		FROM KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK)
 		WHERE PC.statuscode_displayname = 'Completed'
 			AND (
 				PC.activitytypecode LIKE '%face appointment%'
@@ -160,7 +160,7 @@ FROM (
 			,pc.statuscode_displayname
 			,L.statuscode_displayname as AccountStatus
 		FROM kslcloud_mscrm.dbo.account L WITH (NOLOCK)
-		INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK) ON PC.regardingobjectid = L.accountid
+		INNER JOIN KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK) ON PC.regardingobjectid = L.accountid
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 		WHERE PC.statuscode_displayname = 'Completed'
 		) AS b
@@ -203,7 +203,7 @@ FROM (
 			/* Derive text counts */
 			CASE WHEN PC.activitytypecode IN ('Outbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textssent
 			,CASE WHEN PC.activitytypecode IN ('Inbound Text Message','Text Message Conversation') THEN 1 ELSE 0 END AS ksl_textsreceived
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
+		FROM KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK)
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 		WHERE PC.statuscode_displayname = 'Completed'
 		AND PC.ksl_resultoptions_displayname <> 'Cancelled'
@@ -241,7 +241,7 @@ WITH lastce AS (
       , pc.regardingobjectid
       , pc.scheduledstart   AS CompletedDate
       , LEFT(pc.description, 300) AS notes
-    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities pc WITH (NOLOCK)
+    FROM KSLCLOUD_MSCRM.dbo.activities pc WITH (NOLOCK)
     WHERE pc.statuscode_displayname = 'Completed'
       AND ( pc.activitytypecode LIKE '%face appointment%'
             OR pc.activitytypecode LIKE '%walk-in%' )
@@ -285,8 +285,8 @@ AS (
 			PC.ksl_resultoptions_displayname AS Rslt,
 			PC.activityid,
 			PC.description AS notes
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK)
-		JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
+		FROM KSLCLOUD_MSCRM.dbo.Account AS A WITH (NOLOCK)
+		JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
 		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
 		) a
 	)
@@ -446,8 +446,8 @@ FROM (
       PC.ownerid              AS CreatedBy,
       PC.ownerid              AS activityCreatedBy,
       PC.EmailBody
-  FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account    AS A WITH (NOLOCK)
-  JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK)
+  FROM KSLCLOUD_MSCRM.dbo.Account    AS A WITH (NOLOCK)
+  JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK)
     ON PC.RegardingObjectId = A.accountid
 ) a
 WHERE a.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'  -- Byron Park
@@ -455,6 +455,9 @@ WHERE a.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'  -- Byron Park
   AND a.ActivityType LIKE '%Text Message%';   -- include Outbound/Inbound/Conversation
 
 -- TAKE 4
+-- Used to Identifying the "Community Experience" column
+-- Later in the view we check if the activity you are currently looking at happened on the same day as that Community Experience
+-- If so then we set the Community_Experience column to 1 and Appointment will be 0
 WITH lastce AS (
   SELECT
       b.subject            AS ActivitySubject
@@ -474,7 +477,7 @@ WITH lastce AS (
       , pc.regardingobjectid
       , pc.scheduledstart   AS CompletedDate
       , LEFT(pc.description, 300) AS notes
-    FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities pc WITH (NOLOCK)
+    FROM KSLCLOUD_MSCRM.dbo.activities pc WITH (NOLOCK)
     WHERE pc.statuscode_displayname = 'Completed'
       AND ( pc.activitytypecode LIKE '%face appointment%'
             OR pc.activitytypecode LIKE '%walk-in%' )
@@ -483,21 +486,21 @@ WITH lastce AS (
 AllActivities AS (
 	-- In activitypecode = 'Text Message Conversation' let's tally the number of times the word SENT or RCVD appears in the text body
 	SELECT CASE 
-			WHEN a.ActivityType IN ('Outbound Text Message')
+			WHEN a.ActivityType IN ('Outgoing Text Message')
 				THEN 1
-			WHEN a.ActivityType = 'Inbound Text Message'
+			WHEN a.ActivityType = 'Incoming Text Message'
 				THEN 0
 			WHEN a.ActivityType = 'Text Message Conversation'
-				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'SENT  [', ''))) / 7
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'SENT', ''))) / 4
 			ELSE 0
 			END AS TextSent,
 		CASE 
-			WHEN a.ActivityType IN ('Outbound Text Message')
+			WHEN a.ActivityType IN ('Outgoing Text Message')
 				THEN 0
-			WHEN a.ActivityType = 'Inbound Text Message'
+			WHEN a.ActivityType = 'Incoming Text Message'
 				THEN 1
 			WHEN a.ActivityType = 'Text Message Conversation'
-				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'RCVD  [', ''))) / 7
+				THEN (LEN(COALESCE(a.EmailBody, '')) - LEN(REPLACE(COALESCE(a.EmailBody, ''), 'RCVD', ''))) / 4
 			ELSE 0
 			END AS TextReceived,
 		a.*
@@ -520,8 +523,8 @@ AllActivities AS (
 			A.statuscode_displayname AS AccountStatus
 			--NULL AS ksl_textssent, -- TODO make sure can remove
 			--NULL AS ksl_textsreceived -- TODO make sure can remove
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK)
-		JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
+		FROM KSLCLOUD_MSCRM.dbo.Account AS A WITH (NOLOCK)
+		JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
 		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
 		) a
 )
@@ -560,13 +563,13 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Sent_Messages_Biz_Dev
 	,CASE 
-		WHEN activitytype = 'Outbound Text Message'
+		WHEN activitytype = 'Outgoing Text Message'
 			AND AccountStatus LIKE 'referral org%'
 			THEN TextSent
 		ELSE 0
 		END AS TextSent_Biz_Dev
 	,CASE 
-		WHEN activitytype = 'Inbound Text Message'
+		WHEN activitytype = 'Incoming Text Message'
 			AND AccountStatus LIKE 'referral org%'
 			THEN TextReceived
 		ELSE 0

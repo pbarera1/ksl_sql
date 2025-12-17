@@ -18,7 +18,7 @@
 		FROM KiscoCustom.dbo.Associate a
 		JOIN KiscoCustom.dbo.KSL_Roles r ON r.RoleID = a.RoleID
 		JOIN KiscoCustom.dbo.Community c ON c.CommunityIDY = a.USR_CommunityIDY
-		WHERE a.SalesAppID IS NOT NULL -- bring count down from 2890 -> 819
+		--WHERE a.SalesAppID IS NOT NULL -- bring count down from 2890 -> 819
 		)
 
 SELECT ksl_CommunityIdName
