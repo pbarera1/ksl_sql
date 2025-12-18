@@ -1,7 +1,8 @@
 --########################################################################################################################################################
 --###################################################### Fill in Dim_User  #####################################################################
 --########################################################################################################################################################
---TRUNCATE TABLE Dim_User;
+-- Query should only take 1-2 seconds to run
+-- TRUNCATE TABLE Dim_User;
 ;WITH CTE(ksl_CommunityIdName, ksl_CommunityId, FullName, Title, InternalEmailAddress, DomainName, isUserActive, SystemUserId, dupcnt) AS (
 		SELECT c.name
 			,c.CRM_CommunityID
@@ -18,9 +19,10 @@
 		FROM KiscoCustom.dbo.Associate a
 		JOIN KiscoCustom.dbo.KSL_Roles r ON r.RoleID = a.RoleID
 		JOIN KiscoCustom.dbo.Community c ON c.CommunityIDY = a.USR_CommunityIDY
-		--WHERE a.SalesAppID IS NOT NULL -- bring count down from 2890 -> 819
+		WHERE a.USR_Email IS NOT NULL
 		)
 
+-- INSERT INTO Dim_User
 SELECT ksl_CommunityIdName
 	,ksl_CommunityId
 	,FullName

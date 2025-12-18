@@ -171,6 +171,8 @@ ORDER BY accountid, activityid
 
 
 -- TAKE 3? with text count, one per row for conversations
+-- Query should take ~30 seconds to run
+-- TRUNCATE TABLE Fact_Activity;
 WITH AllActivities AS (
     SELECT 
         A.accountid,
@@ -225,7 +227,7 @@ TextConversationEvents AS (
         a.isBD,
         a.isSalesMail,
         a.google_campaignID,
-        a.activityCreatedBy,
+        a.activityCreatedBy
     FROM AllActivities a
     WHERE a.ActivityType = 'Text Message Conversation'
       AND (LEFT(COALESCE(a.EmailBody, a.notes, ''), 4) = 'SENT' 
@@ -254,6 +256,7 @@ NonConversation AS (
     WHERE ActivityType <> 'Text Message Conversation'
 )
 -- Final unified set
+-- INSERT INTO Fact_Activity
 SELECT *
 FROM NonConversation
 
@@ -276,9 +279,17 @@ SELECT
     isSalesMail,
     google_campaignID,
     activityCreatedBy
-FROM TextConversationEvents
+FROM TextConversationEvents;
 
 --TESTING filters
 -- WHERE CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'
 --   AND CompletedDate >= DATEADD(MONTH, -1, GETDATE())
-ORDER BY activityid, CompletedDate;
+-- ORDER BY activityid, CompletedDate;
+-- TESTING END
+
+-- This is SLOOOW
+-- 	  update a
+-- set google_campaignID = g.gCampaignID
+--   FROM [DataWarehouse].[dbo].[Fact_Activity] a
+--   join staging.[dbo].[GAds_CampaignIDs] g on g.accountid = a.[accountid]
+--   where google_campaignID is null 
