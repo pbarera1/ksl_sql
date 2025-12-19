@@ -1,7 +1,26 @@
--- TAKE 4
--- Used to Identifying the "Community Experience" column
--- Later in the view we check if the activity you are currently looking at happened on the same day as that Community Experience
--- If so then we set the Community_Experience column to 1 and Appointment will be 0
+USE [DataWarehouse]
+GO
+
+/****** Object:  View [dbo].[Vw_Activities]    Script Date: 12/18/2025 4:48:24 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+
+
+
+
+
+
+ALTER VIEW [dbo].[Vw_Activities]
+AS
+
+
+
 WITH lastce AS (
   SELECT
       b.subject            AS ActivitySubject
@@ -170,4 +189,10 @@ OUTER APPLY (
 -- TESTING
 -- WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
 -- WHERE x.CompletedDate >= DATEADD(DAY, -1, GETDATE())
-ORDER BY x.CompletedDate DESC;
+
+
+
+
+GO
+
+

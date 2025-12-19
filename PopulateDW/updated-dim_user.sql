@@ -9,7 +9,7 @@
 			,a.USR_First + ' ' + a.USR_Last
 			,r.Name
 			,a.USR_Email
-			,a.USR_Email
+			,ISNULL(a.USR_Email, '') AS DomainName -- NULL to Empty String, column doesn't allow null
 			,IIF(a.USR_Active = 1, 'Yes', 'No') AS isUserActive
 			,a.SalesAppId
 			,ROW_NUMBER() OVER (
