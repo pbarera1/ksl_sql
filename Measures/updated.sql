@@ -84,7 +84,7 @@ Phone Calls Attempted - w Completed:=CALCULATE (
         "Outgoing Phone Call", 
         "Incoming Phone Call"
     },
-    ,Fact_Activity[Result] <> "Cancelled"
+    Fact_Activity[Result] <> "Cancelled"
 )
 
 Sent Messages:=CALCULATE(
@@ -95,12 +95,26 @@ Sent Messages:=CALCULATE(
     Fact_Activity[ActivityType] = "Letter"
 )
 
-Texts Received:=CALCULATE (
-    COUNTROWS ( Fact_Activity ),
-    Fact_Activity[ActivityType] = "Incoming Text Message" || (Fact_Activity[ActivityType] = "Text Message Conversation" && Fact_Activity[Result] = "Text Received") 
+Texts Received:=
+CALCULATE ( 
+    COUNTROWS ( Fact_Activity ), 
+    Fact_Activity[ActivityType] = "Incoming Text Message" 
 )
- 
-Texts Sent:=CALCULATE (
-    COUNTROWS ( Fact_Activity ),
-    Fact_Activity[ActivityType] = "Outgoing Text Message" || (Fact_Activity[ActivityType] = "Text Message Conversation" && Fact_Activity[Result] = "Text Sent") 
++ 
+CALCULATE ( 
+    COUNTROWS ( Fact_Activity ), 
+    Fact_Activity[ActivityType] = "Text Message Conversation", 
+    Fact_Activity[Result] = "Text Received" 
+)
+
+Texts Sent:=
+CALCULATE ( 
+    COUNTROWS ( Fact_Activity ), 
+    Fact_Activity[ActivityType] = "Outgoing Text Message" 
+)
++ 
+CALCULATE ( 
+    COUNTROWS ( Fact_Activity ), 
+    Fact_Activity[ActivityType] = "Text Message Conversation", 
+    Fact_Activity[Result] = "Text Sent" 
 )

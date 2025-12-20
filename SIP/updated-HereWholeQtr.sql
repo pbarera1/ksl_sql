@@ -1,4 +1,4 @@
---use KSLCLOUD_MSCRM_RESTORE_TEST
+--use KSLCLOUD_MSCRM
 --declare @AsOfDate Date = '01-01-2025';
 
 SELECT c.ksl_name
