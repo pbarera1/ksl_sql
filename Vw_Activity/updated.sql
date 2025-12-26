@@ -22,7 +22,7 @@ WITH lastce AS (
       , pc.scheduledstart   AS CompletedDate
       , LEFT(pc.description, 300) AS notes
     FROM KSLCLOUD_MSCRM.dbo.activities pc WITH (NOLOCK)
-    WHERE pc.statuscode_displayname = 'Completed'
+    WHERE pc.ksl_resultoptions_displayname = 'Completed'
       AND ( pc.activitytypecode LIKE '%face appointment%'
             OR pc.activitytypecode LIKE '%walk-in%' )
   ) AS b

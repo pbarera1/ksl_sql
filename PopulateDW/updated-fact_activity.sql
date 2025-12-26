@@ -14,7 +14,7 @@
 WITH AllActivities AS (
     SELECT 
         A.accountid,
-        A.OwnerID                     AS AccountOwnerID,
+        PC.ownerid                    AS AccountOwnerID, -- this was A.OwnerID, but the SSAS model uses this as the relationship between Fact_Activity and Dim_User, and we didn't want to update the model
         A.OwnerIDname                 AS AccountOwnerName,
         A.ksl_CommunityId             AS CommunityId,
         A.ksl_CommunityIdName         AS CommunityIdName,

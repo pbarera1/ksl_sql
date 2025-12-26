@@ -1,11 +1,14 @@
 USE [DataWarehouse]
 GO
-/****** Object:  StoredProcedure [dbo].[Populate_DW_Job]    Script Date: 12/18/2025 4:21:56 PM ******/
+
+/****** Object:  StoredProcedure [dbo].[Populate_DW_Job]    Script Date: 12/22/2025 10:16:48 AM ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[Populate_DW_Job] @AsOfDt datetime
+
+CREATE PROCEDURE [dbo].[Populate_DW_Job] @AsOfDt datetime
 AS
 BEGIN
 declare @DtLast as datetime
@@ -32,7 +35,7 @@ SET @dt_end = @AsOfDt			-- @AsOfDt = GETDATE()
 
 	
 	
-
+	
 	IF OBJECT_ID('staging.dbo.SafetyCompliance', 'U') IS NOT NULL
 		drop TABLE staging.dbo.SafetyCompliance
 	SELECT * INTO staging.dbo.SafetyCompliance
@@ -1478,33 +1481,11 @@ set @DtLast = getdate()
 						ROW_NUMBER() OVER (PARTITION BY b.accountid ORDER BY b.CompletedDate  desc) AS RowNum 
 						from 
 						(
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_phonecalltype as ActivityTypeDetail, PC.regardingobjectid, PC.ksl_datecompleted as CompletedDate, PC.description as notes
+						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, NULL as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, PC.description as notes
 						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE 
-						PC.statecode_displayname = 'Completed' --Workflow changed call to completed
-						and PC.ksl_resultoptions = '864960007' --Result: Completed
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
-						PC.statecode_displayname = 'Completed'
-						and PC.ksl_resultoptions in ('864960005','864960004','864960006') --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_emailtype as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
-						PC.statecode_displayname = 'Completed'
-						and PC.ksl_emailtype = '864960001' --incoming
-						Union All
-						SELECT activityid ,PC.Subject, PC.ActivityTypeCode, 1001 as ActivityTypeDetail, PC.regardingobjectid,PC.actualend as CompletedDate, left(PC.description,300) as notes
-
-						FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
-						inner JOIN kslcloud_mscrm.dbo.ksl_sms PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
- 
-
+						inner JOIN [KSLCLOUD_MSCRM].dbo.activities PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+						WHERE PC.activitytypecode IN ('Outbound Phone Call', 'Incoming Phone Call', 'Committed Face Appointment', 'Unscheduled Walk-In', 'Inbound Email')
+							AND PC.ksl_resultoptions_displayname = 'Completed
 						 ) as b
 						)
 		,
@@ -2471,7 +2452,7 @@ outer apply (select top 1 AFH.ksl_enddate as LastDateOut from staging.dbo.ksl_ap
 
 where 
  (LEA.ksl_donotcontactreason not in (864960001,11,6) or   LEA.ksl_donotcontactreason is null ) --Duplicate - Please Delete,Invalid Contact Info, Confirmed Secret Shopper
-
+  and coalesce(LEA.ownerid,ksl_soldby) is not null
 
 --Add google campagin id from [GAds_CampaignIDs]  --> this is populated with APIGoogleAds.php script
 
@@ -2514,7 +2495,7 @@ WITH AllActivities AS (
             ELSE PC.ksl_resultoptions_displayname
         END AS Result,
         PC.activityid,
-        PC.description                AS notes,
+        left(PC.description,250)                AS notes,
         CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
         CAST(NULL AS varchar(50))     AS google_campaignID,
@@ -2547,7 +2528,7 @@ TextConversationEvents AS (
             ELSE NULL 
         END AS Result,
         a.activityid,
-        a.notes,
+        left(a.notes,250) notes,
         a.isBD,
         a.isSalesMail,
         a.google_campaignID,
@@ -2571,7 +2552,7 @@ NonConversation AS (
         CompletedDate,
         Result,
         activityid,
-        notes,
+        left(notes,250) notes,
         isBD,
         isSalesMail,
         google_campaignID,
@@ -2598,7 +2579,7 @@ SELECT
     CompletedDate,
     Result,
     activityid,
-    notes,
+    left(notes,250) notes,
     isBD,
     isSalesMail,
     google_campaignID,
@@ -4952,3 +4933,6 @@ BEGIN CATCH
 END CATCH
 
  END
+GO
+
+

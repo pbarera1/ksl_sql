@@ -1,5 +1,5 @@
-use KSLCLOUD_MSCRM_RESTORE_TEST;
-declare @Year int = 2025;
+-- use KSLCLOUD_MSCRM;
+-- declare @Year int = 2025;
 
 WITH activity
 AS (
@@ -24,7 +24,7 @@ AS (
 			,PC.regardingobjectid
 			,PC.scheduledend AS CompletedDate
 			,left(PC.description, 300) AS notes
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
+		FROM KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK)
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 		-- all activities except sms, task
 		WHERE PC.activitytypecode NOT LIKE '%text%'
@@ -32,7 +32,7 @@ AS (
 		AND PC.statuscode_displayname = 'Completed'
 		AND PC.ksl_resultoptions_displayname <> 'Cancelled'
 		) AS b
-	INNER JOIN kslcloud_mscrm.dbo.contact a WITH (NOLOCK) ON b.RegardingObjectId = a.contactid
+	INNER JOIN KSLCLOUD_MSCRM.dbo.account a ON b.regardingobjectid = a.accountid
 	WHERE YEAR(CompletedDate) = @Year -- Filter by the selected year
 		AND CompletedDate BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
 			AND CASE 
@@ -40,7 +40,8 @@ AS (
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
 					END
-	
+	AND a.statuscode_displayname LIKE 'referral org%'
+
 	UNION ALL
 	
 	-- Appointments with active residents - appointments for generating Resident referrals
@@ -68,7 +69,7 @@ AS (
 			,left(PC.description, 300) AS notes
 			,c.ksl_CommunityId
 			,c.ksl_CommunityIdName
-		FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.activities PC WITH (NOLOCK)
+		FROM KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK)
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 		JOIN [DataWarehouse].[dbo].[Fact_Lead] c ON c.Lead_AccountID = pc.regardingobjectid
 		WHERE PC.activitytypecode IN ('Committed Face Appointment','Unscheduled Walk-In')
@@ -378,12 +379,12 @@ FROM actsum a
 INNER JOIN [KiscoCustom].[dbo].[Associate] u ON u.SalesAppID = a.accountownerid
 JOIN KiscoCustom.dbo.KSL_Roles r ON r.roleid = u.RoleID
 JOIN KiscoCustom.dbo.Community AS c ON c.CommunityIDY = u.USR_CommunityIDY
-JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community AS commCrm ON commCrm.ksl_communityid = c.CRM_CommunityID
+JOIN KSLCLOUD_MSCRM.dbo.ksl_community AS commCrm ON commCrm.ksl_communityid = c.CRM_CommunityID
 LEFT JOIN leads l ON commCrm.ksl_securityregionteamid = l.ksl_securityregionteamid
 LEFT JOIN nrr ON nrr.ksl_securityregionteamid = commCrm.ksl_securityregionteamid
 LEFT JOIN moveins mi ON mi.ksl_securityregionteamid = commCrm.ksl_securityregionteamid
 LEFT JOIN newrs nr ON nr.ownerid = u.SalesAppID
 LEFT JOIN resref rr ON rr.[ksl_associtateduser] = u.SalesAppID
-WHERE appointment_bd + email_bd + phonecall_bd > 5
+WHERE appointment_BD + email_BD + phonecall_BD > 5
 ORDER BY 2
 	,1

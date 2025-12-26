@@ -83,7 +83,8 @@ AllActivities AS (
 			PC.ksl_resultoptions_displayname AS Result,
 			PC.activityid,
 			PC.description AS notes,
-			A.statuscode_displayname AS AccountStatus
+			A.statuscode_displayname AS AccountStatus,
+			CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD
 			--NULL AS ksl_textssent, -- TODO make sure can remove
 			--NULL AS ksl_textsreceived -- TODO make sure can remove
 		FROM KSLCLOUD_MSCRM.dbo.Account AS A WITH (NOLOCK)

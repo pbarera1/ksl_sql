@@ -45,13 +45,13 @@ WHERE systemuserid IN (
 		FROM (
 			SELECT DISTINCT act.ownerid
 			-- systemuserid for users with an activity on a Referral Org account
-			FROM KSLCLOUD_MSCRM_RESTORE_TEST..activities act
-			INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.Account AS A WITH (NOLOCK) ON A.accountid = act.RegardingObjectId
+			FROM KSLCLOUD_MSCRM..activities act
+			INNER JOIN KSLCLOUD_MSCRM.dbo.Account AS A WITH (NOLOCK) ON A.accountid = act.RegardingObjectId
 			INNER JOIN KiscoCustom.dbo.Associate AS u ON u.SalesAppID = act.ownerid
 			JOIN KiscoCustom.dbo.Community as c ON c.CommunityIDY = u.USR_CommunityIDY
-			JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community as comm ON comm.ksl_communityid = c.CRM_CommunityID
+			JOIN KSLCLOUD_MSCRM.dbo.ksl_community as comm ON comm.ksl_communityid = c.CRM_CommunityID
 			-- ksl_community region col matches the region for @c (ex. la posada)
-			WHERE comm.ksl_regionid = (SELECT TOP 1 ksl_regionid FROM KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community WHERE ksl_communityid = '119C1A08-0142-E511-96FE-0050568B37AC')
+			WHERE comm.ksl_regionid = (SELECT TOP 1 ksl_regionid FROM KSLCLOUD_MSCRM.dbo.ksl_community WHERE ksl_communityid IN (@c))
 			--AND A.statuscode_displayname LIKE 'referral org%' -- brings results to 0
 			AND A.statecode = 0 --active
 			AND act.scheduledstart BETWEEN getdate() - 45 AND getdate() + 14
