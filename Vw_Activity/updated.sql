@@ -1,4 +1,3 @@
--- TAKE 4
 -- Used to Identifying the "Community Experience" column
 -- Later in the view we check if the activity you are currently looking at happened on the same day as that Community Experience
 -- If so then we set the Community_Experience column to 1 and Appointment will be 0
@@ -23,14 +22,13 @@ WITH lastce AS (
       , LEFT(pc.description, 300) AS notes
     FROM KSLCLOUD_MSCRM.dbo.activities pc WITH (NOLOCK)
     WHERE pc.ksl_resultoptions_displayname = 'Completed'
-      AND ( pc.activitytypecode LIKE '%face appointment%'
-            OR pc.activitytypecode LIKE '%walk-in%' )
+      AND pc.activitytypecode IN ('Committed Face Appointment', 'Unscheduled Walk-In')
   ) AS b
 ),
 AllActivities AS (
 	-- In activitypecode = 'Text Message Conversation' let's tally the number of times the word SENT or RCVD appears in the text body
 	SELECT CASE 
-			WHEN a.ActivityType IN ('Outgoing Text Message')
+			WHEN a.ActivityType = 'Outgoing Text Message'
 				THEN 1
 			WHEN a.ActivityType = 'Incoming Text Message'
 				THEN 0
@@ -39,7 +37,7 @@ AllActivities AS (
 			ELSE 0
 			END AS TextSent,
 		CASE 
-			WHEN a.ActivityType IN ('Outgoing Text Message')
+			WHEN a.ActivityType = 'Outgoing Text Message'
 				THEN 0
 			WHEN a.ActivityType = 'Incoming Text Message'
 				THEN 1
@@ -85,7 +83,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Completed_Phone_Calls
 	,CASE 
-		WHEN activitytype IN ('Incoming Phone Call')
+		WHEN activitytype = 'Incoming Phone Call'
 			AND COALESCE(Result, '') = 'Completed'
 			THEN 1
 		ELSE 0
@@ -101,7 +99,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Appointment
 	,CASE 
-		WHEN ActivityType = 'Inbound Email'
+		WHEN ActivityType = 'Outbound Email'
 			AND AccountStatus LIKE 'referral org%'
 			THEN 1
 		ELSE 0
@@ -134,7 +132,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Appointment_Biz_Dev
 	,CASE 
-		WHEN ActivityType IN ('In-Person Appointment', 'Committed Face Appointment', 'Unscheduled Walk-In')
+		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
 			AND COALESCE(Result, '') = 'Completed'
 			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
 			THEN 1
@@ -142,9 +140,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		END AS Community_Experience
 	,0 AS Virtual_Community_Experience --non existant field
 	,CASE 
-		WHEN activitytype LIKE '%phone%'
-		AND activitytype <> 'Committed Phone Appointment'
-			AND COALESCE(ActivityTypeDetail, '') <> 'Incoming Phone Call'
+		WHEN activitytype = 'Outgoing Phone Call'
 			AND COALESCE(Result, '') <> 'Cancelled'
 			AND COALESCE(Result, '') <> 'Completed'
 			AND AccountStatus LIKE 'referral org%'
@@ -152,9 +148,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		ELSE 0
 		END AS Phone_Call_Attempted_Biz_Dev
 	,CASE 
-		WHEN activitytype LIKE '%phone%'
-		AND activitytype <> 'Committed Phone Appointment'
-			AND COALESCE(ActivityTypeDetail, '') <> 'Incoming Phone Call'
+		WHEN activitytype = 'Outgoing Phone Call'
 			AND COALESCE(Result, '') <> 'Cancelled'
 			AND COALESCE(Result, '') <> 'Completed'
 			THEN 1

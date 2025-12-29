@@ -29,13 +29,12 @@ AS (
 		-- all activities except sms, task
 		WHERE PC.activitytypecode NOT LIKE '%text%'
 		AND PC.activitytypecode <> 'Task'
-		AND PC.statuscode_displayname = 'Completed'
-		AND PC.ksl_resultoptions_displayname <> 'Cancelled'
+		AND PC.ksl_resultoptions_displayname = 'Completed'
 		) AS b
 	INNER JOIN KSLCLOUD_MSCRM.dbo.account a ON b.regardingobjectid = a.accountid
 	WHERE YEAR(CompletedDate) = @Year -- Filter by the selected year
 		AND CompletedDate BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-			AND CASE 
+			AND CASE
 					WHEN @Year = YEAR(GETDATE())
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -43,7 +42,7 @@ AS (
 	AND a.statuscode_displayname LIKE 'referral org%'
 
 	UNION ALL
-	
+
 	-- Appointments with active residents - appointments for generating Resident referrals
 	SELECT e.ownerid AccountOwnerID
 		,e.owneridname AccountOwnerName
@@ -74,13 +73,13 @@ AS (
 		JOIN [DataWarehouse].[dbo].[Fact_Lead] c ON c.Lead_AccountID = pc.regardingobjectid
 		WHERE PC.activitytypecode IN ('Committed Face Appointment','Unscheduled Walk-In')
 		AND PC.statuscode_displayname = 'Completed'
-			--AND PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled 
+			--AND PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled
 			--AND pc.ksl_appointmenttype = '864960003' -- Bus Development Drop In
 			--and pc.compl
 			AND scheduledstart > c.MoveInDate
 			AND YEAR(scheduledstart) = @Year -- Filter by the selected year
 			AND scheduledstart BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-				AND CASE 
+				AND CASE
 						WHEN @Year = YEAR(GETDATE())
 							THEN GETDATE() -- If it's the current year, go up to today
 						ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -90,31 +89,29 @@ AS (
 	,actSUM
 AS (
 	SELECT accountownerid
-		,Sum(CASE 
+		,Sum(CASE
 				WHEN [activitytype] IN ('Committed Face Appointment BD', 'Unscheduled Walk-In BD')
 				--WHEN [activitytype] LIKE '%appointment BD%'
 					THEN 1
 				ELSE 0
 				END) AS appointment_BD
-		,Sum(CASE 
-				WHEN [activitytype] IN ('RR Committed Face Appointment BD', 'RR Unscheduled Walk-In BD') --TODO correct?
-				--WHEN [activitytype] LIKE '%RRappointment BD%'
+		,Sum(CASE
+				WHEN [activitytype] IN ('RR Committed Face Appointment BD', 'RR Unscheduled Walk-In BD')
 					THEN 1
 				ELSE 0
 				END) * 1.0 AS RR_appointment_BD
-		,Sum(CASE 
-				WHEN [activitytype] LIKE '%email%'
+		,Sum(CASE
+				WHEN [activitytype] IN ('Outbound Email BD', 'Inbound Email BD')
 					THEN 1
 				ELSE 0
 				END) AS email_BD
-		,Sum(CASE 
-				WHEN [activitytype] LIKE '%letter%'
+		,Sum(CASE
+				WHEN [activitytype] = 'Letter BD'
 					THEN 1
 				ELSE 0
 				END) AS letter_BD
-		,Sum(CASE 
-				WHEN [activitytype] LIKE '%phone%'
-				AND [activitytype] <> 'Committed Phone Appointment BD'
+		,Sum(CASE
+				WHEN [activitytype] IN ('Outgoing Phone Call BD', 'Incoming Phone Call BD', 'Committed Phone Appointment BD')
 					THEN 1
 				ELSE 0
 				END) AS phonecall_BD
@@ -145,7 +142,7 @@ AS (
 				,MAX(afh.OwnerId) AS afh_OwnerID
 				--,LEA.ksl_ReasonDetailIdName AS ReasonDetail
 				,MAX(ksl_MoveOutReasonDetailIdName) AS MoveOutReasonDetail
-			FROM ksl_apartmentfinancialhistory afh WITH (NOLOCK) --history of what happened 
+			FROM ksl_apartmentfinancialhistory afh WITH (NOLOCK) --history of what happened
 			LEFT JOIN account A WITH (NOLOCK) ON a.AccountID = ksl_accountleadid
 			LEFT JOIN Quote q WITH (NOLOCK) ON q.QuoteID = ksl_estimateid
 			WHERE (
@@ -186,7 +183,7 @@ AS (
 			) AS y
 		FULL OUTER JOIN [Quote] est ON QuoteID = ksl_estimateId
 		LEFT JOIN account A WITH (NOLOCK) ON a.accountid = est.customerid
-		WHERE coalesce(CASE 
+		WHERE coalesce(CASE
 					WHEN y.ksl_BeginTransactionType = 864960001
 						THEN 'Actual Move in'
 					WHEN y.ksl_BeginTransactionType = 864960003
@@ -205,7 +202,7 @@ AS (
 			AND a.[ksl_initialsourcecategory] = '25AC1CB4-C27F-E311-986A-0050568B37AC'
 			--and isnull(y.ksl_CommunityId,est.ksl_CommunityId) = '0DC35920-B2DE-E211-9163-0050568B37AC'
 			AND isnull(ksl_BeginDate, est.ksl_schfinanmovein) BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-				AND CASE 
+				AND CASE
 						WHEN @Year = YEAR(GETDATE())
 							THEN GETDATE() -- If the selected year is the current year, use today's date
 						ELSE DATEFROMPARTS(@Year, 12, 31) -- Otherwise, use December 31st of the selected year
@@ -225,7 +222,7 @@ AS (
 	WHERE [ksl_initialsourcecategory] = '25AC1CB4-C27F-E311-986A-0050568B37AC'
 		AND YEAR(ksl_initialinquirydate) = @Year -- Filter by the selected year
 		AND ksl_initialinquirydate BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-			AND CASE 
+			AND CASE
 					WHEN @Year = YEAR(GETDATE())
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -253,7 +250,7 @@ AS (
 			,MAX(afh.OwnerId) AS afh_OwnerID
 			--,LEA.ksl_ReasonDetailIdName AS ReasonDetail
 			,MAX(ksl_MoveOutReasonDetailIdName) AS MoveOutReasonDetail
-		FROM ksl_apartmentfinancialhistory afh WITH (NOLOCK) --history of what happened 
+		FROM ksl_apartmentfinancialhistory afh WITH (NOLOCK) --history of what happened
 		LEFT JOIN account A WITH (NOLOCK) ON a.AccountID = ksl_accountleadid
 		LEFT JOIN Quote q WITH (NOLOCK) ON q.QuoteID = ksl_estimateid
 		WHERE (
@@ -298,7 +295,7 @@ AS (
 	LEFT JOIN ksl_apartment apt ON est.ksl_ApartmentId = apt.ksl_ApartmentID
 	LEFT JOIN ksl_apartment tra ON est.ksl_act_transferfromapartmentid = tra.ksl_ApartmentID
 	INNER JOIN [KSLCLOUD_MSCRM].[dbo].ksl_community c ON a.ksl_communityid = c.ksl_communityid
-	WHERE coalesce(CASE 
+	WHERE coalesce(CASE
 				WHEN y.ksl_BeginTransactionType = 864960001
 					THEN 'Actual Move in'
 				WHEN y.ksl_BeginTransactionType = 864960003
@@ -313,7 +310,7 @@ AS (
 				END, est.ksl_estimatetype_displayname) IN ('Actual Move in')
 		AND YEAR(isnull(ksl_BeginDate, est.ksl_schfinanmovein)) = @Year -- Filter by the selected year
 		AND isnull(ksl_BeginDate, est.ksl_schfinanmovein) BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-			AND CASE 
+			AND CASE
 					WHEN @Year = YEAR(GETDATE())
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -329,7 +326,7 @@ AS (
 	WHERE [ksl_contacttype] = '864960002'
 		AND YEAR(c.createdon) = @Year -- Filter by the selected year
 		AND c.createdon BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-			AND CASE 
+			AND CASE
 					WHEN @Year = YEAR(GETDATE())
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -345,7 +342,7 @@ AS (
 	INNER JOIN [KSLCLOUD_MSCRM].[dbo].[ksl_referralorgs] r ON r.ksl_referralorgsid = c.ksl_referralorganization
 	WHERE YEAR(c.createdon) = @Year -- Filter by the selected year
 		AND c.createdon BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
-			AND CASE 
+			AND CASE
 					WHEN @Year = YEAR(GETDATE())
 						THEN GETDATE() -- If it's the current year, go up to today
 					ELSE DATEFROMPARTS(@Year, 12, 31) -- If it's a past year, go up to December 31st of that year
@@ -356,7 +353,7 @@ AS (
 	)
 
 SELECT u.USR_First + ' ' + u.USR_Last AS fullname
-	,CASE 
+	,CASE
 		WHEN r.Name LIKE 'Business Development Director'
 			OR r.Name LIKE 'Buisness Developement Director'
 			OR r.Name LIKE 'Director, Business Development'

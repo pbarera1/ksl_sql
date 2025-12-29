@@ -8,7 +8,6 @@
 --TRUNCATE TABLE Fact_Activity
 --INSERT INTO Fact_Activity
 
--- TAKE 3? with text count, one per row for conversations
 -- Query should take ~30 seconds to run
 -- TRUNCATE TABLE Fact_Activity;
 WITH AllActivities AS (
@@ -28,6 +27,7 @@ WITH AllActivities AS (
             ELSE PC.ksl_resultoptions_displayname
         END AS Result,
         PC.activityid,
+        -- some email templates are too long for the notes column, may tabular model from processing
         PC.description                AS notes,
         CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
