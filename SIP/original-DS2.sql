@@ -1,31 +1,33 @@
---62 results
---declare @AsOfDate date
---declare @comm uniqueidentifier
---set @AsOfDate = '9/30/24'
---set @comm = '27C35920-B2DE-E211-9163-0050568B37AC'  ;
+-- 64 results
+DECLARE @AsOfDate DATE;
+DECLARE @comm UNIQUEIDENTIFIER;
+SET @AsOfDate = '2024-09-30';
+SET @comm = '27C35920-B2DE-E211-9163-0050568B37AC';
+
 SELECT c.Community AS ksl_name
-	,u.fullname
+	,(u.USR_First + ' ' + u.USR_Last) AS fullname
 	,b.description
 	,c.ksl_communityid
-	,c.shortname AS ksl_shortname
+	,c.ShortName AS ksl_shortname
 	,(
-		SELECT max(amt)
+		SELECT MAX(amt)
 		FROM kiscocustom..PIP_FinalCommission
-		WHERE sd = u.fullname
-			AND month(dt) = month(@AsOfDate)
-			AND year(dt) = year(@AsOfDate)
-			AND shortname = c.shortname
+		WHERE sd = (u.USR_First + ' ' + u.USR_Last)
+			AND MONTH(dt) = MONTH(@AsOfDate)
+			AND YEAR(dt) = YEAR(@AsOfDate)
+			AND shortname = c.ShortName
 		) AS FinalAmount1
 	,(
-		SELECT Max(Notes)
+		SELECT MAX(Notes)
 		FROM kiscocustom..PIP_FinalCommission
-		WHERE sd = u.fullname
-			AND month(dt) = month(@AsOfDate)
-			AND year(dt) = year(@AsOfDate)
-			AND shortname = c.shortname
+		WHERE sd = (u.USR_First + ' ' + u.USR_Last)
+			AND MONTH(dt) = MONTH(@AsOfDate)
+			AND YEAR(dt) = YEAR(@AsOfDate)
+			AND shortname = c.ShortName
 		) AS Notes
-FROM ksldb252.datawarehouse.dbo.budgets b
-INNER JOIN systemuser u ON b.description = u.internalemailaddress
+FROM ksldb252.datawarehouse.dbo.budgets AS b
+INNER JOIN KiscoCustom.dbo.Associate AS u
+	ON b.description = u.USR_Email
 INNER JOIN (
 	SELECT CASE 
 			WHEN ShortName = 'KSL'
@@ -39,48 +41,50 @@ INNER JOIN (
 			ELSE Community
 			END AS Community
 	FROM datawarehouse.dbo.Dim_Community
-	) c ON c.shortname = b.community
-WHERE month(convert(DATE, b.dt)) = month(@AsOfDate)
-	--   and u.islicensed = 1
-	AND year(convert(DATE, b.dt)) = year(@AsOfDate)
+	) AS c ON c.ShortName = b.community
+WHERE MONTH(CONVERT(DATE, b.dt)) = MONTH(@AsOfDate)
+	AND YEAR(CONVERT(DATE, b.dt)) = YEAR(@AsOfDate)
 	AND budget = '0'
 	AND (
 		c.ksl_communityid = @comm
 		OR @comm = '27C35920-B2DE-E211-9163-0050568B37AC'
 		)
---and description = 'Rebekah.deMoss@kiscosl.com'
 
 UNION ALL
 
+-- Home Office specialists block
 SELECT 'Home Office' AS ksl_name
-	,u.fullname
-	,internalemailaddress description
-	,'27C35920-B2DE-E211-9163-0050568B37AC' ksl_communityid
+	,(u.USR_First + ' ' + u.USR_Last) AS fullname
+	,u.USR_Email AS description
+	,'27C35920-B2DE-E211-9163-0050568B37AC' AS ksl_communityid
 	,'HO' AS ksl_shortname
 	,(
-		SELECT max(amt)
+		SELECT MAX(amt)
 		FROM kiscocustom..PIP_FinalCommission
-		WHERE sd = u.fullname
-			AND month(dt) = month(@AsOfDate)
-			AND year(dt) = year(@AsOfDate)
+		WHERE sd = (u.USR_First + ' ' + u.USR_Last)
+			AND MONTH(dt) = MONTH(@AsOfDate)
+			AND YEAR(dt) = YEAR(@AsOfDate)
 			AND shortname = 'HO'
 		) AS FinalAmount1
 	,(
-		SELECT Max(Notes)
+		SELECT MAX(Notes)
 		FROM kiscocustom..PIP_FinalCommission
-		WHERE sd = u.fullname
-			AND month(dt) = month(@AsOfDate)
-			AND year(dt) = year(@AsOfDate)
+		WHERE sd = (u.USR_First + ' ' + u.USR_Last)
+			AND MONTH(dt) = MONTH(@AsOfDate)
+			AND YEAR(dt) = YEAR(@AsOfDate)
 			AND shortname = 'HO'
 		) AS Notes
-FROM systemuser u
+FROM KiscoCustom.dbo.Associate AS u
+INNER JOIN KiscoCustom.dbo.Community kc ON kc.CommunityIDY = u.USR_CommunityIDY
+INNER JOIN KSLCLOUD_MSCRM_RESTORE_TEST.dbo.ksl_community commCrm ON commCrm.ksl_communityid = kc.CRM_CommunityID
+LEFT JOIN KiscoCustom.dbo.KSL_Roles r ON r.RoleID = u.RoleID
 WHERE (
-		u.ksl_communityid = @comm
+		commCrm.ksl_communityid = @comm
 		OR @comm = '27C35920-B2DE-E211-9163-0050568B37AC'
 		)
 	AND (
-		u.title LIKE '%Sales Specialist%'
-		--OR internalemailaddress in ( select description from  ksldb252.datawarehouse.dbo.budgets where Community = 'HO')
+		r.Name LIKE '%Sales Specialist%'
+		OR u.USR_Role LIKE '%Sales Specialist%'
 		)
-	AND u.islicensed = 1
-ORDER BY ShortName
+	AND u.USR_Active = 1
+ORDER BY ShortName;
