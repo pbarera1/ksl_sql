@@ -6,7 +6,7 @@
 ;WITH CTE(ksl_CommunityIdName, ksl_CommunityId, FullName, Title, InternalEmailAddress, DomainName, isUserActive, SystemUserId, dupcnt) AS (
 		SELECT c.name
 			,c.CRM_CommunityID
-			,a.USR_First + ' ' + a.USR_Last
+			,TRIM(a.USR_First) + ' ' + TRIM(a.USR_Last)
 			,r.Name
 			,a.USR_Email
 			,ISNULL(a.USR_Email, '') AS DomainName -- NULL to Empty String, column doesn't allow null
