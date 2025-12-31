@@ -1,6 +1,11 @@
+-- 5-10 seconds to run
 DECLARE @today       date = CONVERT(date, GETDATE());
 DECLARE @now         datetime = GETDATE();
-DECLARE @ceStartDate date = '2022-03-09';  -- your original CE/Appt cutoff :contentReference[oaicite:2]{index=2}
+DECLARE @ceStartDate date = '2022-03-09';  -- original CE/Appt cutoff
+
+-- Delete existing data for today before inserting new data. Safeguard against duplicate inserts if ran mutiple times in a day.
+DELETE FROM [DataWarehouse].[dbo].[Fact_SalesStats]
+WHERE dt = @today;
 
 ;WITH
 /* 1) Active sales users once */
@@ -49,7 +54,7 @@ Community AS (
     FROM KSLCLOUD_MSCRM.dbo.ksl_community WITH (NOLOCK)
 ),
 
-/* 4) Filter activities once (only the columns you use) */
+/* 4) Filter activities once (only the columns needed) */
 ActivitiesBase AS (
     SELECT
         act.activityid,
@@ -61,7 +66,8 @@ ActivitiesBase AS (
         act.statuscode_displayname,
         act.scheduledstart,
         act.scheduledend,
-        act.description
+        act.description,
+        act.createdon
     FROM KSLCLOUD_MSCRM.dbo.activities act WITH (NOLOCK)
     WHERE act.RegardingObjectId IS NOT NULL
 ),
@@ -196,7 +202,7 @@ ActiveLeadsByOwner AS (
 /* 8) Past due activities */
 PastDueByOwner AS (
     SELECT
-        a.ownerid,
+        ab.ownerid,
         COUNT_BIG(*) AS PastDueActivityCount
     FROM ActivitiesBase ab
     INNER JOIN LeadAccounts a
@@ -204,9 +210,12 @@ PastDueByOwner AS (
     LEFT JOIN Community c
         ON c.ksl_communityId = a.ksl_CommunityId
     WHERE ab.ActivityTypeCode NOT IN ('Outgoing Text Message','Incoming Text Message','Text Message Conversation')
-      AND ISNULL(ab.ksl_resultoptions_displayname,'') <> 'Completed'
+      -- Activity wouldn't be past due if it has <> Completed status
+      -- For example: Cancelled, Left Message, No Show, No Answer, Rescheduled
+      AND (ab.ksl_resultoptions_displayname IS NULL OR ab.ksl_resultoptions_displayname = '')
       AND CONVERT(date, DATEADD(hour, c.ksl_UTCTimeAdjust, ab.scheduledend)) < @today
-    GROUP BY a.ownerid
+    AND ab.createdon > '2025-12-10'
+    GROUP BY ab.ownerid
 ),
 
 /* 9) DataCompliance inputs */
@@ -256,6 +265,12 @@ DataComplianceByOwner AS (
     GROUP BY l.ownerid
 )
 
+ --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Insert into [DataWarehouse].[dbo].[Fact_SalesStats] ( [dt],[Owner],[OwnerID],[Community],[CommunityID], RADcount  ,DataComplianceCount ,PastDueActivityCount, activeLeads )
+
+ --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 /* FINAL */
 SELECT
     u.dt,
@@ -264,7 +279,7 @@ SELECT
     u.ksl_CommunityIdName,
     u.ksl_CommunityId,
     COALESCE(rad.RADcount, 0)             AS RADcount,
-    COALESCE(dc.DataCompliance, 0)        AS DataCompliance,
+    COALESCE(dc.DataCompliance, 0)        AS DataComplianceCount,
     COALESCE(pd.PastDueActivityCount, 0)  AS PastDueActivityCount,
     COALESCE(al.activeLeads, 0)           AS activeLeads
 FROM ActiveSalesUsers u

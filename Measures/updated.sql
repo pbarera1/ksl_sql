@@ -72,7 +72,8 @@ Phone Calls Attempted:=CALCULATE (
     COUNTROWS ( Fact_Activity ),
     Fact_Activity[ActivityType] IN { 
         "Outgoing Phone Call", 
-        "Incoming Phone Call"
+        "Incoming Phone Call",
+        "Committed Phone Appointment"
     },
     Fact_Activity[Result] <> "Cancelled",
     Fact_Activity[Result] <> "Completed"
@@ -82,7 +83,8 @@ Phone Calls Attempted - w Completed:=CALCULATE (
     COUNTROWS ( Fact_Activity ),
     Fact_Activity[ActivityType] IN { 
         "Outgoing Phone Call", 
-        "Incoming Phone Call"
+        "Incoming Phone Call",
+        "Committed Phone Appointment"
     },
     Fact_Activity[Result] <> "Cancelled"
 )
