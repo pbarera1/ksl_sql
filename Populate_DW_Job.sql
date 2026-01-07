@@ -1470,431 +1470,470 @@ SELECT 10,10,'1/1/2018','CT','No','CT',NULL,10,'Cottages'
 set @DtLast = getdate()
 
 
- ;WITH 
-		LastContact AS
-						(select 
-						b.accountid,
-							   --Get Last Contact Activity Information
-							   b.Subject as ActivitySubject,
-							   b.ActivityTypeCode as LCType,
-							   b.ActivityTypeDetail as LCTypeDetail,
-							   b.regardingobjectid,
-							   b.CompletedDate as LastContactDate,
-							   b.notes as LCNotes,
-						ROW_NUMBER() OVER (PARTITION BY b.accountid ORDER BY b.CompletedDate  desc) AS RowNum 
-						from 
-						(
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_phonecalltype as ActivityTypeDetail, PC.regardingobjectid, PC.ksl_datecompleted as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE 
+    ;WITH
+        LastContact
+        AS
+        (
+            SELECT
+                b.accountid
+                --Get Last Contact Activity Information
+                ,b.Subject AS ActivitySubject
+                ,b.ActivityTypeCode AS LCType
+                ,b.ActivityTypeDetail AS LCTypeDetail
+                ,b.regardingobjectid
+                ,b.CompletedDate AS LastContactDate
+                ,b.notes AS LCNotes
+                ,ROW_NUMBER() OVER (PARTITION BY b.accountid ORDER BY b.CompletedDate  DESC) AS RowNum
+            FROM
+                (
+						                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_phonecalltype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.ksl_datecompleted AS CompletedDate ,PC.description AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed' --Workflow changed call to completed
-						and PC.ksl_resultoptions = '864960007' --Result: Completed
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+                        AND PC.ksl_resultoptions = '864960007'
+                    --Result: Completed
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS CompletedDate ,PC.description AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed'
-						and PC.ksl_resultoptions in ('864960005','864960004','864960006') --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_emailtype as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+                        AND PC.ksl_resultoptions IN ('864960005','864960004','864960006')
+                --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_emailtype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.actualend AS CompletedDate ,PC.description AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed'
-						and PC.ksl_emailtype = '864960001' --incoming
-						Union All
-						SELECT activityid ,PC.Subject, PC.ActivityTypeCode, 1001 as ActivityTypeDetail, PC.regardingobjectid,PC.actualend as CompletedDate, left(PC.description,300) as notes
+                        AND PC.ksl_emailtype = '864960001'
+                --incoming
+                UNION ALL
+                    SELECT activityid ,PC.Subject ,PC.ActivityTypeCode ,1001 AS ActivityTypeDetail ,PC.regardingobjectid ,PC.actualend AS CompletedDate ,LEFT(PC.description,300) AS notes
 
-						FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
-						inner JOIN kslcloud_mscrm.dbo.ksl_sms PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
- 
+                    FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
+                        INNER JOIN kslcloud_mscrm.dbo.ksl_sms PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
 
-						 ) as b
-						)
-		,
-		LastCE AS
-						(select 
-						b.accountid,
-							   --Get Last Contact Activity Information
-							   b.Subject as ActivitySubject,
-							   b.ActivityTypeCode as LCEType,
-							   b.ActivityTypeDetail as LCETypeDetail,
-							   b.regardingobjectid,
-							   b.CompletedDate as LastCEDate,
-							   b.notes as LCENotes,
-						ROW_NUMBER() OVER (PARTITION BY b.accountid ORDER BY b.CompletedDate  desc) AS RowNum 
-						from 
-						(
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, PC.description as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+
+						 ) AS b
+        )
+
+        ,LastCE
+        AS
+        (
+            SELECT
+                b.accountid
+                --Get Last Contact Activity Information
+                ,b.Subject AS ActivitySubject
+                ,b.ActivityTypeCode AS LCEType
+                ,b.ActivityTypeDetail AS LCETypeDetail
+                ,b.regardingobjectid
+                ,b.CompletedDate AS LastCEDate
+                ,b.notes AS LCENotes
+                ,ROW_NUMBER() OVER (PARTITION BY b.accountid ORDER BY b.CompletedDate  DESC) AS RowNum
+            FROM
+                (
+						SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS CompletedDate ,PC.description AS notes
+                FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                    INNER JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                WHERE
 						PC.statecode_displayname = 'Completed'
-						and PC.ksl_resultoptions in ('864960005','864960004','864960006') -- 864960004:Community Experience  864960006: Virtual Experience
-						 ) as b
-						)
-		,
-		 NextActivity AS
-						(select 
-						b.accountid,
-							   --Get Next Activity Information
-							   b.Subject as ActivitySubject,
-							   b.ActivityTypeCode as NAType,
-							   b.ActivityTypeDetail as NATypeDetail,
-							   b.regardingobjectid,
-							   b.scheduledend as NextActivityDate,
-							   b.notes as NANotes,
-							   b.activityid as NAActivityid,
-							   b.ownerid,
-						ROW_NUMBER() OVER (PARTITION BY accountid ORDER BY b.scheduledend  asc) AS RowNum 
-						from 
-						(
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_phonecalltype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE --PC.actualend IS NULL AND PC.scheduledend IS NOT NULL
+                    AND PC.ksl_resultoptions IN ('864960005','864960004','864960006') -- 864960004:Community Experience  864960006: Virtual Experience
+						 ) AS b
+        )
+
+        ,NextActivity
+        AS
+        (
+            SELECT
+                b.accountid
+                --Get Next Activity Information
+                ,b.Subject AS ActivitySubject
+                ,b.ActivityTypeCode AS NAType
+                ,b.ActivityTypeDetail AS NATypeDetail
+                ,b.regardingobjectid
+                ,b.scheduledend AS NextActivityDate
+                ,b.notes AS NANotes
+                ,b.activityid AS NAActivityid
+                ,b.ownerid
+                ,ROW_NUMBER() OVER (PARTITION BY accountid ORDER BY b.scheduledend  ASC) AS RowNum
+            FROM
+                (
+						                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_phonecalltype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE --PC.actualend IS NULL AND PC.scheduledend IS NOT NULL
 						 PC.statecode_displayname <> 'Completed'
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  PC.statecode_displayname <> 'Completed'
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, NULL as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.task PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  PC.statecode_displayname <> 'Completed'
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_emailtype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  PC.statecode_displayname <> 'Completed'
-						 ) as b
-						)
-		,
-		 LastAttempt AS
-						(select 
-						b.accountid,
-							   --Get Last Attempt Information
-							   b.Subject as ActivitySubject,
-							   b.ActivityTypeCode as LAType,
-							   b.ActivityTypeDetail as LATypeDetail,
-							   b.regardingobjectid,
-							   b.CompletedDate as LastAttemptDate,
-							   b.notes as LANotes,
-						ROW_NUMBER() OVER (PARTITION BY accountid ORDER BY b.CompletedDate  desc) AS RowNum 
-						from 
-						(
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_phonecalltype as ActivityTypeDetail, PC.regardingobjectid, PC.ksl_datecompleted as CompletedDate, left(PC.description,300) as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE 
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE  PC.statecode_displayname <> 'Completed'
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,NULL AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.task PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE  PC.statecode_displayname <> 'Completed'
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_emailtype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE  PC.statecode_displayname <> 'Completed'
+						 ) AS b
+        )
+
+        ,LastAttempt
+        AS
+        (
+            SELECT
+                b.accountid
+                --Get Last Attempt Information
+                ,b.Subject AS ActivitySubject
+                ,b.ActivityTypeCode AS LAType
+                ,b.ActivityTypeDetail AS LATypeDetail
+                ,b.regardingobjectid
+                ,b.CompletedDate AS LastAttemptDate
+                ,b.notes AS LANotes
+                ,ROW_NUMBER() OVER (PARTITION BY accountid ORDER BY b.CompletedDate  DESC) AS RowNum
+            FROM
+                (
+						                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_phonecalltype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.ksl_datecompleted AS CompletedDate ,LEFT(PC.description,300) AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed' --Workflow changed call to completed
-						and PC.ksl_resultoptions <> '864960008' --Result: Anything but cancelled
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, left(PC.description,300) as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+                        AND PC.ksl_resultoptions <> '864960008'
+                    --Result: Anything but cancelled
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS CompletedDate ,LEFT(PC.description,300) AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed'
-						and PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled 
-						Union All
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_emailtype as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, left(PC.description,300) as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+                        AND PC.ksl_resultoptions <> '100000000'
+                --Result: 100000000:Cancelled
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_emailtype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.actualend AS CompletedDate ,LEFT(PC.description,300) AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed'
-						and PC.ksl_emailtype = '864960002' --Outgoing
-						UNION ALL
-						SELECT L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_lettertype as ActivityTypeDetail, PC.regardingobjectid, PC.actualend as CompletedDate, left(PC.description,300) as notes
-						FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
-						inner JOIN [KSLCLOUD_MSCRM].dbo.letter PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-						WHERE  
+                        AND PC.ksl_emailtype = '864960002'
+                --Outgoing
+                UNION ALL
+                    SELECT L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_lettertype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.actualend AS CompletedDate ,LEFT(PC.description,300) AS notes
+                    FROM [KSLCLOUD_MSCRM].dbo.Account L WITH (NOLOCK)
+                        INNER JOIN [KSLCLOUD_MSCRM].dbo.letter PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                    WHERE
 						PC.statecode_displayname = 'Completed'
-						Union All
-						SELECT activityid ,PC.Subject, PC.ActivityTypeCode, 1001 as ActivityTypeDetail, PC.regardingobjectid,PC.actualend as CompletedDate, left(PC.description,300) as notes
+                UNION ALL
+                    SELECT activityid ,PC.Subject ,PC.ActivityTypeCode ,1001 AS ActivityTypeDetail ,PC.regardingobjectid ,PC.actualend AS CompletedDate ,LEFT(PC.description,300) AS notes
 
-						FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
-						inner JOIN kslcloud_mscrm.dbo.ksl_sms PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
- 
-						 ) as b
-		)
+                    FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
+                        INNER JOIN kslcloud_mscrm.dbo.ksl_sms PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
 
- --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+						 ) AS b
+        )
 
-Insert into [DataWarehouse].[dbo].[Fact_SalesStats] ( [dt],[Owner],[OwnerID],[Community],[CommunityID], RADcount  ,DataComplianceCount ,PastDueActivityCount, activeLeads )
+    --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
- --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    INSERT INTO [DataWarehouse].[dbo].[Fact_SalesStats]
+        ( [dt],[Owner],[OwnerID],[Community],[CommunityID], RADcount ,DataComplianceCount ,PastDueActivityCount, activeLeads )
+
+    --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
-Select u.dt, u.[FullName], u.[SystemUserId], [ksl_CommunityIdName]
+    SELECT u.dt ,u.[FullName] ,u.[SystemUserId] ,[ksl_CommunityIdName]
       ,[ksl_CommunityId] --, u.Title
-		,coalesce(RADcount,0) RADcount  
-		,coalesce(SourceCategoryCount,0)  DataCompliance 
-		,coalesce(PastDueActivityCount ,0) PastDueActivityCount
-		,coalesce(activeLeads ,0) activeLeads
-		from 
-			--
-				(SELECT  
-				
-						cast(getdate() as date) as dt, 
-						[FullName], [SystemUserId] ,[ksl_CommunityIdName]
-							,[ksl_CommunityId], Title
+		,COALESCE(RADcount,0) RADcount
+		,COALESCE(SourceCategoryCount,0)  DataCompliance
+		,COALESCE(PastDueActivityCount ,0) PastDueActivityCount
+		,COALESCE(activeLeads ,0) activeLeads
+    FROM
+        --
+        (SELECT
 
-										  FROM [DataWarehouse].[dbo].[Dim_User]
-										  where [isUserActive] = 'yes'
-										  and Title like '%sales%'
-										 
-										  and Title not like '%VP%') u
+            cast(getdate() AS DATE) AS dt
+            ,[FullName] ,[SystemUserId] ,[ksl_CommunityIdName]
+							,[ksl_CommunityId] ,Title
+
+        FROM [DataWarehouse].[dbo].[Dim_User]
+        WHERE [isUserActive] = 'yes'
+            AND Title LIKE '%sales%'
+
+            AND Title NOT LIKE '%VP%') u
 
 
-left outer join 
-						--RADcount
-									(
+        LEFT OUTER JOIN
+        --RADcount
+        (
 								SELECT
-								cast(getdate() as date) as dt, 
-								systemuserid,
-								u.fullname,
-								title,
-								count(A.accountID) as RADcount
+            cast(getdate() AS DATE) AS dt
+            ,systemuserid
+            ,u.fullname
+            ,title
+            ,count(A.accountID) AS RADcount
 
-								--'RADcount' Description
+        --'RADcount' Description
 
 
-								FROM [KSLCLOUD_MSCRM].dbo.Account A
-								OUTER APPLY (select top 1 *  from NextActivity where regardingobjectid = A.accountid order by NextActivity.NextActivityDate asc) NA
-								OUTER APPLY (select top 1 *  from LastContact where regardingobjectid = A.accountid order by LastContact.LastContactDate desc) LC
-								OUTER APPLY (select top 1 *  from LastAttempt where regardingobjectid = A.accountid order by LastAttempt.LastAttemptDate desc) LA
-								OUTER APPLY (select top 1 *  from LastCE where regardingobjectid = A.accountid order by LastCE.LastCEDate desc) LCE
-								LEFT JOIN [KSLCLOUD_MSCRM].dbo.SystemUser U ON U.SystemUserId = A.OwnerID
-								LEFT JOIN [KSLCLOUD_MSCRM].dbo.ksl_community C ON C.ksl_communityId = A.ksl_CommunityId
-								LEFT JOIN [KSLCLOUD_MSCRM].dbo.contact con ON con.contactid = A.primarycontactid
+        FROM [KSLCLOUD_MSCRM].dbo.Account A
+								OUTER APPLY (SELECT TOP 1
+                *
+            FROM NextActivity
+            WHERE regardingobjectid = A.accountid
+            ORDER BY NextActivity.NextActivityDate ASC) NA
+								OUTER APPLY (SELECT TOP 1
+                *
+            FROM LastContact
+            WHERE regardingobjectid = A.accountid
+            ORDER BY LastContact.LastContactDate DESC) LC
+								OUTER APPLY (SELECT TOP 1
+                *
+            FROM LastAttempt
+            WHERE regardingobjectid = A.accountid
+            ORDER BY LastAttempt.LastAttemptDate DESC) LA
+								OUTER APPLY (SELECT TOP 1
+                *
+            FROM LastCE
+            WHERE regardingobjectid = A.accountid
+            ORDER BY LastCE.LastCEDate DESC) LCE
+            LEFT JOIN [KSLCLOUD_MSCRM].dbo.SystemUser U ON U.SystemUserId = A.OwnerID
+            LEFT JOIN [KSLCLOUD_MSCRM].dbo.ksl_community C ON C.ksl_communityId = A.ksl_CommunityId
+            LEFT JOIN [KSLCLOUD_MSCRM].dbo.contact con ON con.contactid = A.primarycontactid
 
-								Where 
-								--A.ksl_communityid = '39C35920-B2DE-E211-9163-0050568B37AC' 
+        WHERE
+								--A.ksl_communityid = '39C35920-B2DE-E211-9163-0050568B37AC'
 
-								--and 
-								a.statuscode_displayname in ( 'Lead')
 								--and
-								--[isUserActive] = 'yes'
-								--		  and Title like '%sales%'
-										 
-										  and Title not like '%VP%'
-								and (a.ksl_mostrecentcommunityexperience < getdate() -30 or a.ksl_mostrecentcommunityexperience is null )
-								and a.ksl_initialinquirydate < getdate() -30
-								and (a.ksl_reservationfeetransactiondate is null  )
+								a.statuscode_displayname IN ( 'Lead')
+            --and
+            --[isUserActive] = 'yes'
+            --		  and Title like '%sales%'
+
+            AND Title NOT LIKE '%VP%'
+            AND (a.ksl_mostrecentcommunityexperience < getdate() -30 OR a.ksl_mostrecentcommunityexperience IS NULL )
+            AND a.ksl_initialinquirydate < getdate() -30
+            AND (a.ksl_reservationfeetransactiondate IS NULL  )
 
 
-								and (0 <= 
-								case 
+            AND (0 <=
+								CASE
 
-								when a.ksl_moveintiming_displayname = '> 2 Years'
-								then datediff(day,coalesce(LA.LastAttemptDate,getdate()-90) + 90, getdate()) 
+								WHEN a.ksl_moveintiming_displayname = '> 2 Years'
+								THEN datediff(day,COALESCE(LA.LastAttemptDate,getdate()-90) + 90, getdate())
 
-								when ksl_mostrecentcommunityexperience >= getdate()-120 and LC.LastContactDate > getdate() - 60
-										and (ksl_waitlisttransactiondate is null and a.ksl_waitlistenddate is not NULL)  
-								then datediff(day,LA.LastAttemptDate + 14, getdate())
+								WHEN ksl_mostrecentcommunityexperience >= getdate()-120 AND LC.LastContactDate > getdate() - 60
+                AND (ksl_waitlisttransactiondate IS NULL AND a.ksl_waitlistenddate IS NOT NULL)
+								THEN datediff(day,LA.LastAttemptDate + 14, getdate())
 
-								when  ksl_mostrecentcommunityexperience >= getdate()-270 and LC.LastContactDate > getdate() - 180 
-										and (ksl_waitlisttransactiondate is null and a.ksl_waitlistenddate is not NULL) 
-								then datediff(day,LA.LastAttemptDate + 45, getdate())
+								WHEN  ksl_mostrecentcommunityexperience >= getdate()-270 AND LC.LastContactDate > getdate() - 180
+                AND (ksl_waitlisttransactiondate IS NULL AND a.ksl_waitlistenddate IS NOT NULL)
+								THEN datediff(day,LA.LastAttemptDate + 45, getdate())
 
-								when  ksl_losttocompetitoron is not null --and (ksl_waitlisttransactiondate is null and a.ksl_waitlistenddate is not NULL)  
-								then datediff(day,LA.LastAttemptDate + 180, getdate())
+								WHEN  ksl_losttocompetitoron IS NOT NULL --and (ksl_waitlisttransactiondate is null and a.ksl_waitlistenddate is not NULL)
+								THEN datediff(day,LA.LastAttemptDate + 180, getdate())
 
-								else datediff(day,coalesce(LA.LastAttemptDate,getdate()-90) + 90, getdate()) 
-								end 
-								or 
-								CONVERT(DATE, dateadd(hour,C.ksl_UTCTimeAdjust,NA.NextActivityDate)) < CONVERT(DATE, getdate()) 
+								ELSE datediff(day,COALESCE(LA.LastAttemptDate,getdate()-90) + 90, getdate())
+								END
+            OR
+            CONVERT(DATE, dateadd(hour,C.ksl_UTCTimeAdjust,NA.NextActivityDate)) < CONVERT(DATE, getdate())
 								)
 
-								group by systemuserid ,					u.title,			u.fullname) x  on u.SystemUserId = x.systemuserid
+        GROUP BY systemuserid ,					u.title,			u.fullname) x ON u.SystemUserId = x.systemuserid
 
 
-Left join 
-		--DataCompliance
-			(select OwnerID,owneridname, count(*) as SourceCategoryCount from 
-									
-														
-									(
-											SELECT 
-											a.ksl_initialsourcecategoryname as SourceCategory
+        LEFT JOIN
+        --DataCompliance
+        (SELECT OwnerID ,owneridname ,count(*) AS SourceCategoryCount
+        FROM
+
+
+            (
+											SELECT
+                a.ksl_initialsourcecategoryname AS SourceCategory
 											,a.OwnerID
 											,a.[accountid]
 											,a.owneridname
-											,a.ksl_initialsourcecategory as SourceCategoryID 		
-											,a.ksl_moveintiming_displayname as MoveInTiming
-											,a.ksl_leveloflivingpreference_displayname as CarePref
-									,a.ksl_leveloflivingpreference as CarePrefID 	
-									,a.ksl_moveintiming as MoveInTimingID 	
+											,a.ksl_initialsourcecategory AS SourceCategoryID
+											,a.ksl_moveintiming_displayname AS MoveInTiming
+											,a.ksl_leveloflivingpreference_displayname AS CarePref
+									,a.ksl_leveloflivingpreference AS CarePrefID
+									,a.ksl_moveintiming AS MoveInTimingID
 										,a.ksl_initialinquirydate
 										--,fp.accountid as FloorPlanPref
 										,modifiedon
-											FROM [KSLCLOUD_MSCRM].dbo.Account A
-												--left join ( SELECT distinct [accountid] 
-												--				FROM [KSLCLOUD_MSCRM].[dbo].[ksl_account_ksl_unitfloorplan]) fp on a.accountid = fp.accountid 
-											Where  a.statuscode_displayname IN ('Lead') 				
+            FROM [KSLCLOUD_MSCRM].dbo.Account A
+            --left join ( SELECT distinct [accountid]
+            --				FROM [KSLCLOUD_MSCRM].[dbo].[ksl_account_ksl_unitfloorplan]) fp on a.accountid = fp.accountid
+            WHERE  a.statuscode_displayname IN ('Lead')
 
-									) q  
-									
-									left join (	
-													select a.accountid, fp.accountid fpaccountid, CompletedDate,a.createdon
-													FROM (SELECT * FROM  [KSLCLOUD_MSCRM].dbo.Account Where statuscode_displayname IN ('Lead') ) A
-						
-													-- INNER Join with all account that have had a CE or Appointment 
-													inner join (SELECT * FROM  (
+									) q
 
-																					select X.*
-																					,row_number() over(partition by accountid order by completeddate desc) rw
+            LEFT JOIN (
+													SELECT a.accountid ,fp.accountid fpaccountid ,CompletedDate ,a.createdon
+            FROM (SELECT *
+                FROM [KSLCLOUD_MSCRM].dbo.Account
+                WHERE statuscode_displayname IN ('Lead') ) A
 
-																					,case when ActivityType = 'Appointment' and ( Rslt ='CEXP - Community Experience Given' or (ActivityTypeDetail in (864960001 ) and Rslt = 'COMP - Completed') ) 
-																									and CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE) then 1 else 0 end as Community_Experience
+                -- INNER Join with all account that have had a CE or Appointment
+                INNER JOIN (SELECT *
+                FROM (
 
-																					,case when ActivityType = 'Appointment' and  Rslt ='COMP - Completed' and ActivityTypeDetail in (864960001 ) and CAST(CompletedDate AS DATE) <> CAST(LastCEDate AS DATE) then 1 else 0 end as Appointment
+																					SELECT X.*
+																					,row_number() OVER(partition BY accountid ORDER BY completeddate DESC) rw
+
+																					,CASE WHEN ActivityType = 'Appointment' AND ( Rslt ='CEXP - Community Experience Given' OR (ActivityTypeDetail IN (864960001 ) AND Rslt = 'COMP - Completed') )
+                            AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE) THEN 1 ELSE 0 END AS Community_Experience
+
+																					,CASE WHEN ActivityType = 'Appointment' AND Rslt ='COMP - Completed' AND ActivityTypeDetail IN (864960001 ) AND CAST(CompletedDate AS DATE) <> CAST(LastCEDate AS DATE) THEN 1 ELSE 0 END AS Appointment
 
 
-																					from (
-																									select 
-																									a.accountid,
-																									--a.[ksl_initialinquirydate], -- js 5/18
-																									a.OwnerId AccountOwnerID, 
-																									b.OwnerIdName AccountOwnerName,
-																									a.ksl_CommunityId AS CommunityId,
-																									a.ksl_CommunityIdName AS CommunityIdName,
-																										   --Get Last Attempt Information
-																										   b.Subject as ActivitySubject,
-																										   b.ActivityTypeCode as ActivityType,
-																										   b.ActivityTypeDetail as ActivityTypeDetail,
-																										   convert(date,b.CompletedDate) CompletedDate,
-																										   Rslt,
-																										   activityid,
-																										   notes, 
-																										   ksl_textssent, ksl_textsreceived
-																									from 
-																									(
+                    FROM (
+																									SELECT
+                            a.accountid
+                            --a.[ksl_initialinquirydate], -- js 5/18
+                            ,a.OwnerId AccountOwnerID
+                            ,b.OwnerIdName AccountOwnerName
+                            ,a.ksl_CommunityId AS CommunityId
+                            ,a.ksl_CommunityIdName AS CommunityIdName
+                            --Get Last Attempt Information
+                            ,b.Subject AS ActivitySubject
+                            ,b.ActivityTypeCode AS ActivityType
+                            ,b.ActivityTypeDetail AS ActivityTypeDetail
+                            ,CONVERT(DATE,b.CompletedDate) CompletedDate
+                            ,Rslt
+                            ,activityid
+                            ,notes
+                            ,ksl_textssent ,ksl_textsreceived
+                        FROM
+                            (
 
-																									SELECT activityid ,ksl_resultoptions_displayname as Rslt,L.accountid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate
-																									, pc.description as notes,PC.owneridname, NULL as ksl_textssent, NULL as ksl_textsreceived
-																									FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
-																									inner JOIN kslcloud_mscrm.dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
-																									WHERE  
+																									SELECT activityid ,ksl_resultoptions_displayname AS Rslt ,L.accountid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS CompletedDate
+																									 ,pc.description AS notes ,PC.owneridname ,NULL AS ksl_textssent ,NULL AS ksl_textsreceived
+                            FROM kslcloud_mscrm.dbo.Account L WITH (NOLOCK)
+                                INNER JOIN kslcloud_mscrm.dbo.appointment PC WITH (NOLOCK) ON PC.RegardingObjectId = L.accountid
+                            WHERE
 																									PC.statecode_displayname = 'Completed'
-																									and PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled 
+                                AND PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled
 
-																									) as b 
-																									inner join kslcloud_mscrm.dbo.account a on b.accountid = a.accountid
-
- 
+																									) AS b
+                            INNER JOIN kslcloud_mscrm.dbo.account a ON b.accountid = a.accountid
 
 
-																					) as x
 
-																					OUTER APPLY (select top 1 *  from (select 
 
-																															   --Get Last Contact Activity Information
-																															   b.Subject as ActivitySubject,
-																															   b.ActivityTypeCode as LCEType,
-																															   b.ActivityTypeDetail as LCETypeDetail,
-																															   b.regardingobjectid,
-																															   b.CompletedDate as LastCEDate,
-																															   b.notes as LCENotes,
-																															   b.activityid
-																														from 
-																														(
-																															SELECT pc.activityid, PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as CompletedDate, left(PC.description,300) as notes
-																															from [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) 
-																															WHERE  
+																					) AS x
+
+																					OUTER APPLY (SELECT TOP 1
+                            *
+                        FROM (SELECT
+
+                                --Get Last Contact Activity Information
+                                b.Subject AS ActivitySubject
+                                ,b.ActivityTypeCode AS LCEType
+                                ,b.ActivityTypeDetail AS LCETypeDetail
+                                ,b.regardingobjectid
+                                ,b.CompletedDate AS LastCEDate
+                                ,b.notes AS LCENotes
+                                ,b.activityid
+                            FROM
+                                (
+																															SELECT pc.activityid ,PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS CompletedDate ,LEFT(PC.description,300) AS notes
+                                FROM [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK)
+                                WHERE
 																															PC.statecode_displayname = 'Completed'
-																																		and PC.ksl_appointmenttype in ( 864960001)
+                                    AND PC.ksl_appointmenttype IN ( 864960001)
 
-																																		and PC.ksl_resultoptions in ('864960005','864960004', '864960006') --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
-																																		) as b) LastCE where X.accountid = lastCE.regardingobjectid order by LastCE.LastCEDate asc
+                                    AND PC.ksl_resultoptions IN ('864960005','864960004', '864960006') --Result: 864960005:Completed  864960004:Community Experience  864960006: Virtual Experience
+																																		) AS b) LastCE
+                        WHERE X.accountid = lastCE.regardingobjectid
+                        ORDER BY LastCE.LastCEDate ASC
 																													) FCE
 
-																					) E 
-																		where (Community_Experience =1 OR Appointment =1)
-																		
-																		AND CAST(CompletedDate AS DATE) >= '3/9/2022' -- this process started on this date, no need to pull extra and extend the run time. 
-																		and rw = 1 
+																					) E
+                WHERE (Community_Experience =1 OR Appointment =1)
+
+                    AND CAST(CompletedDate AS DATE) >= '3/9/2022' -- this process started on this date, no need to pull extra and extend the run time.
+                    AND rw = 1
 
 
-																		) v on v.accountid = a.accountid
-						
-													-- All the accounts with FP filled out. 
-													left join ( SELECT distinct [accountid] 
-																							FROM [KSLCLOUD_MSCRM].[dbo].[ksl_account_ksl_unitfloorplan]) fp on a.accountid = fp.accountid 
+																		) v ON v.accountid = a.accountid
 
-												) u on q.accountid = u.accountid
+                -- All the accounts with FP filled out.
+                LEFT JOIN ( SELECT DISTINCT [accountid]
+                FROM [KSLCLOUD_MSCRM].[dbo].[ksl_account_ksl_unitfloorplan]) fp ON a.accountid = fp.accountid
+
+												) u ON q.accountid = u.accountid
 
 
 
-									where  
-										( 
-										SourceCategory is null 
-										or
-										  MoveInTiming IS NULL 
-										  or
-										 CarePref is null
-										 or( fpaccountid is null 
-												and CompletedDate < getdate() -7 
+        WHERE
+										(
+										SourceCategory IS NULL
+            OR
+            MoveInTiming IS NULL
+            OR
+            CarePref IS NULL
+            OR( fpaccountid IS NULL
+            AND CompletedDate < getdate() -7
 												--and createdon > '1/1/2022'
 												)
-										) 
-										and ksl_initialinquirydate < getdate() -30
-							
-										
-									group by 
-									OwnerID ,owneridname									) k on u.SystemUserId =k.ownerid
+										)
+            AND ksl_initialinquirydate < getdate() -30
 
-left join (select ownerid, count(*) activeLeads
-			from [KSLCLOUD_MSCRM].dbo.account A 
-				
-				where  a.statuscode_displayname = 'Lead'
-				group by a.ownerid)  ac  on u.SystemUserId = ac.ownerid
 
-left join 
-		--PastDueActivityCount
-			(select a.ownerid,
-				count(b.activityid) as PastDueActivityCount
+        GROUP BY
+									OwnerID ,owneridname									) k ON u.SystemUserId =k.ownerid
 
-				from 
-				(
-				SELECT PC.Subject, PC.ActivityTypeCode, PC.ksl_phonecalltype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-				FROM [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK) 
-				WHERE --PC.actualend IS NULL AND PC.scheduledend IS NOT NULL
+        LEFT JOIN (SELECT ownerid ,count(*) activeLeads
+        FROM [KSLCLOUD_MSCRM].dbo.account A
+
+        WHERE  a.statuscode_displayname = 'Lead'
+        GROUP BY a.ownerid)  ac ON u.SystemUserId = ac.ownerid
+
+        LEFT JOIN
+        --PastDueActivityCount
+        (SELECT a.ownerid
+            ,count(b.activityid) AS PastDueActivityCount
+
+        FROM
+            (
+				                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        SELECT PC.Subject ,PC.ActivityTypeCode ,PC.ksl_phonecalltype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                FROM [KSLCLOUD_MSCRM].dbo.PhoneCall PC WITH (NOLOCK)
+                WHERE --PC.actualend IS NULL AND PC.scheduledend IS NOT NULL
 				 PC.statecode_displayname <> 'Completed'
-				and PC.ksl_phonecalltype <> '864960003'
-				Union All
-				SELECT PC.Subject, PC.ActivityTypeCode, PC.ksl_appointmenttype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledstart as scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-				FROM [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK) 
-				WHERE  PC.statecode_displayname <> 'Completed'
-				Union All
-				SELECT PC.Subject, PC.ActivityTypeCode, NULL as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-				FROM  [KSLCLOUD_MSCRM].dbo.task PC 
-				WHERE  PC.statecode_displayname <> 'Completed'
-				Union All
-				SELECT  PC.Subject, PC.ActivityTypeCode, PC.ksl_emailtype as ActivityTypeDetail, PC.regardingobjectid, PC.scheduledend, PC.description as notes, PC.activityid, PC.ownerid
-				FROM [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK) 
-				WHERE  PC.statecode_displayname <> 'Completed'
-				and PC.ksl_emailtype <> '864960004'
-				 ) as b
-				INNER JOIN [KSLCLOUD_MSCRM].dbo.account A WITH (NOLOCK) on A.accountid = b.regardingobjectid
-				LEFT JOIN [KSLCLOUD_MSCRM].dbo.SystemUser U ON U.SystemUserId = A.OwnerID
-				LEFT JOIN [KSLCLOUD_MSCRM].dbo.ksl_community C ON C.ksl_communityId = A.ksl_CommunityId
+                    AND PC.ksl_phonecalltype <> '864960003'
+            UNION ALL
+                SELECT PC.Subject ,PC.ActivityTypeCode ,PC.ksl_appointmenttype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledstart AS scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                FROM [KSLCLOUD_MSCRM].dbo.appointment PC WITH (NOLOCK)
+                WHERE  PC.statecode_displayname <> 'Completed'
+            UNION ALL
+                SELECT PC.Subject ,PC.ActivityTypeCode ,NULL AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                FROM [KSLCLOUD_MSCRM].dbo.task PC
+                WHERE  PC.statecode_displayname <> 'Completed'
+            UNION ALL
+                SELECT PC.Subject ,PC.ActivityTypeCode ,PC.ksl_emailtype AS ActivityTypeDetail ,PC.regardingobjectid ,PC.scheduledend ,PC.description AS notes ,PC.activityid ,PC.ownerid
+                FROM [KSLCLOUD_MSCRM].dbo.email PC WITH (NOLOCK)
+                WHERE  PC.statecode_displayname <> 'Completed'
+                    AND PC.ksl_emailtype <> '864960004'
+				 ) AS b
+            INNER JOIN [KSLCLOUD_MSCRM].dbo.account A WITH (NOLOCK) ON A.accountid = b.regardingobjectid
+            LEFT JOIN [KSLCLOUD_MSCRM].dbo.SystemUser U ON U.SystemUserId = A.OwnerID
+            LEFT JOIN [KSLCLOUD_MSCRM].dbo.ksl_community C ON C.ksl_communityId = A.ksl_CommunityId
 
-				where CONVERT(DATE, dateadd(hour,C.ksl_UTCTimeAdjust,b.scheduledend)) < CONVERT(DATE, getdate()) 
-				--and A.ksl_CommunityId = '$CRM_CommunityID' 
-				and a.statuscode_displayname = 'Lead'
-				group by a.ownerid)  pd  on u.SystemUserId = pd.ownerid
+        WHERE CONVERT(DATE, dateadd(hour,C.ksl_UTCTimeAdjust,b.scheduledend)) < CONVERT(DATE, getdate())
+            --and A.ksl_CommunityId = '$CRM_CommunityID'
+            AND a.statuscode_displayname = 'Lead'
+        GROUP BY a.ownerid)  pd ON u.SystemUserId = pd.ownerid
 
 
 
-								where  u.Title <> 'Sales Coordinator'
-								and u.FullName not in ('# Dynamic.Test' ,'Cedarwood Sales')
-								and [ksl_CommunityId] is not null 
+    WHERE  u.Title <> 'Sales Coordinator'
+        AND u.FullName NOT IN ('# Dynamic.Test' ,'Cedarwood Sales')
+        AND [ksl_CommunityId] IS NOT NULL
 
 
 

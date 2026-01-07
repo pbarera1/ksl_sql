@@ -4,8 +4,8 @@ DECLARE @now         datetime = GETDATE();
 DECLARE @ceStartDate date = '2022-03-09';  -- original CE/Appt cutoff
 
 -- Delete existing data for today before inserting new data. Safeguard against duplicate inserts if ran mutiple times in a day.
-DELETE FROM [DataWarehouse].[dbo].[Fact_SalesStats]
-WHERE dt = @today;
+-- DELETE FROM [DataWarehouse].[dbo].[Fact_SalesStats]
+-- WHERE dt = @today;
 
 ;WITH
 /* 1) Active sales users once */
@@ -267,7 +267,7 @@ DataComplianceByOwner AS (
 
  --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Insert into [DataWarehouse].[dbo].[Fact_SalesStats] ( [dt],[Owner],[OwnerID],[Community],[CommunityID], RADcount  ,DataComplianceCount ,PastDueActivityCount, activeLeads )
+-- Insert into [DataWarehouse].[dbo].[Fact_SalesStats] ( [dt],[Owner],[OwnerID],[Community],[CommunityID], RADcount  ,DataComplianceCount ,PastDueActivityCount, activeLeads )
 
  --%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

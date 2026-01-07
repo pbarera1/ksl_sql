@@ -27,8 +27,8 @@ WITH AllActivities AS (
             ELSE PC.ksl_resultoptions_displayname
         END AS Result,
         PC.activityid,
-        -- some email templates are too long for the notes column, may tabular model from processing
-        PC.description                AS notes,
+        -- some email templates are too long for the notes column, stopping tabular model from processing
+        left(PC.description,250)                AS notes,
         CASE WHEN A.statuscode_displayname = 'Referral Org' THEN 'Yes' ELSE 'No' END AS isBD,
         CASE WHEN PC.description LIKE '%sm.chat%' THEN 'Yes' ELSE 'No' END AS isSalesMail,
         CAST(NULL AS varchar(50))     AS google_campaignID,
