@@ -1,13 +1,13 @@
--- Used to Identifying the "Community Experience" column
--- Later in the view we check if the activity you are currently looking at happened on the same day as that Community Experience
--- If so then we set the Community_Experience column to 1 and Appointment will be 0
+-- Used to identify the "Community Experience" column
+-- Later in the view we check if the activity you are currently looking is the same as the first Community Experience
+-- If so then we set the Community_Experience column to 1 and Appointment 0
 WITH lastce AS (
   SELECT
       b.subject            AS ActivitySubject
     , b.activitytypecode   AS LCEType
     -- , b.activitytypedetail AS LCETypeDetail
     , b.regardingobjectid
-    , b.createdon          AS LastCEDate
+    , b.CompletedDate          AS LastCEDate
     , b.notes              AS LCENotes
     , b.activityid
   FROM (
@@ -67,7 +67,7 @@ AllActivities AS (
 			--NULL AS ksl_textsreceived -- TODO make sure can remove
 		FROM KSLCLOUD_MSCRM.dbo.Account AS A WITH (NOLOCK)
 		JOIN KSLCLOUD_MSCRM.dbo.activities AS PC WITH (NOLOCK) ON PC.RegardingObjectId = A.accountid
-		JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID
+		LEFT JOIN KiscoCustom.dbo.Associate AS Assoc WITH (NOLOCK) ON PC.ownerid = Assoc.SalesAppID -- left join
 		) a
 )
 
@@ -95,6 +95,7 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 		END AS Sent_Messages
 	,CASE 
 		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
+			-- AND FCE.activityid <> x.activityid -- Activity is NOT the first Community Experience. This was the original logic. But does it make sense to exclude first CE from appts?
 			THEN 1
 		ELSE 0
 		END AS Appointment
@@ -134,7 +135,8 @@ SELECT X.* --,case when ROW_NUMBER() over (partition by accountid order by compl
 	,CASE 
 		WHEN ActivityType IN ('Committed Face Appointment', 'Unscheduled Walk-In')
 			AND COALESCE(Result, '') = 'Completed'
-			AND CAST(CompletedDate AS DATE) = CAST(LastCEDate AS DATE)
+			--AND CAST(x.CompletedDate AS DATE) = CAST(FCE.LastCEDate AS DATE) -- WAS scheduledstart = createdon NOW scheduledstart = scheduledstart
+			AND FCE.activityid = x.activityid -- Activity is the same as the first Community Experience
 			THEN 1
 		ELSE 0
 		END AS Community_Experience
@@ -165,3 +167,8 @@ OUTER APPLY (
 -- WHERE x.CommunityId = '3BC35920-B2DE-E211-9163-0050568B37AC'   -- Byron Park
 -- WHERE x.CompletedDate >= DATEADD(DAY, -1, GETDATE())
 ORDER BY x.CompletedDate DESC;
+
+
+
+-- A CE is the first instance of an appointment. At least how it was tracked in Vw_Activity. I think this is the one sales cares about as they got them in the door.
+-- I was checking that [first ce].scheduledstart = activity.createdon NOW [first ce].scheduledstart = activity.scheduledstart

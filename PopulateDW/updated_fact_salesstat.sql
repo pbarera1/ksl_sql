@@ -149,6 +149,14 @@ LastAttempt AS (
 ),
 
 /* 6) RADcount */
+-- a. Account is a Lead (Account a WHERE a.statuscode_displayname = 'Lead')
+-- b. AND - No CE in last 30 days, Initial inquiry date more than 30 days ago, and haven't paid a reservation fee yet.
+-- c. AND - ONE OF THESE
+--  1. on waitlist and no contact last 14 days
+--  2. on waitlist and visitied last 45 days and no contact last 45 days
+--  3. lost to competitor and no contact last 180 days
+--  4. not moving for > 2 years and no contact last 90 days
+--  5. NextActivity is not completed and scheduledend is before today (aka past due)
 RADcountByOwner AS (
     SELECT
         la.ownerid,
