@@ -1,5 +1,5 @@
 -- use KSLCLOUD_MSCRM;
--- declare @Year int = 2025;
+-- declare @Year int = 2026;
 
 WITH activity
 AS (
@@ -22,7 +22,7 @@ AS (
 			,PC.ActivityTypeCode
 			,PC.activitytypecode AS ActivityTypeDetail
 			,PC.regardingobjectid
-			,PC.scheduledend AS CompletedDate
+			,PC.scheduledstart AS CompletedDate
 			,left(PC.description, 300) AS notes
 		FROM KSLCLOUD_MSCRM.dbo.activities PC WITH (NOLOCK)
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
@@ -55,7 +55,7 @@ AS (
 		,e.ActivityTypeDetail AS ActivityTypeDetail
 		,convert(DATE, e.CompletedDate) CompletedDate
 	FROM (
-		SELECT TOP 1000 activityid
+		SELECT activityid
 			,ksl_resultoptions_displayname AS Rslt
 			,pc.ownerid
 			,Assoc.USR_First + ' ' + Assoc.USR_Last AS owneridname
@@ -72,7 +72,7 @@ AS (
 		LEFT JOIN KiscoCustom.dbo.Associate Assoc ON PC.ownerid = Assoc.SalesAppID
 		JOIN [DataWarehouse].[dbo].[Fact_Lead] c ON c.Lead_AccountID = pc.regardingobjectid
 		WHERE PC.activitytypecode IN ('Committed Face Appointment','Unscheduled Walk-In')
-		AND PC.statuscode_displayname = 'Completed'
+		AND PC.ksl_resultoptions_displayname = 'Completed'
 			--AND PC.ksl_resultoptions <> '100000000' --Result: 100000000:Cancelled
 			--AND pc.ksl_appointmenttype = '864960003' -- Bus Development Drop In
 			--and pc.compl
@@ -99,7 +99,7 @@ AS (
 				WHEN [activitytype] IN ('RR Committed Face Appointment BD', 'RR Unscheduled Walk-In BD')
 					THEN 1
 				ELSE 0
-				END) * 1.0 AS RR_appointment_BD
+				END) AS RR_appointment_BD
 		,Sum(CASE
 				WHEN [activitytype] IN ('Outbound Email BD', 'Inbound Email BD')
 					THEN 1
@@ -323,7 +323,7 @@ AS (
 	SELECT count(contactid) RSourceAvg
 		,c.createdby ownerid
 	FROM [KSLCLOUD_MSCRM].[dbo].[contact] c
-	WHERE [ksl_contacttype] = '864960002'
+	WHERE [ksl_contacttype_displayname] = 'Referral Source'
 		AND YEAR(c.createdon) = @Year -- Filter by the selected year
 		AND c.createdon BETWEEN DATEFROMPARTS(@Year, 1, 1) -- Start from January 1st of the selected year
 			AND CASE
@@ -383,5 +383,6 @@ LEFT JOIN moveins mi ON mi.ksl_securityregionteamid = commCrm.ksl_securityregion
 LEFT JOIN newrs nr ON nr.ownerid = u.SalesAppID
 LEFT JOIN resref rr ON rr.[ksl_associtateduser] = u.SalesAppID
 WHERE appointment_BD + email_BD + phonecall_BD > 5
+--AND u.USR_Email = 'Kristi.Hall@kiscosl.com'
 ORDER BY 2
 	,1
